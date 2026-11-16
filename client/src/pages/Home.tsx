@@ -48,6 +48,8 @@ export default function Home() {
   const [reducedMotion, setReducedMotion] = useState(false);
   const [playlistOpen, setPlaylistOpen] = useState(false);
   const [selectedAlbumIndex, setSelectedAlbumIndex] = useState(0);
+  const [selectedTrackIndex, setSelectedTrackIndex] = useState(0);
+  const [selectionRequestId, setSelectionRequestId] = useState(0);
   const dialogRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -112,8 +114,28 @@ export default function Home() {
   const trackTotal = albums.reduce((sum, album) => sum + album.trackCount, 0);
   const queueTotal = discographyQueue.reduce((sum, album) => sum + album.trackCount, 0);
   const selectedAlbum = discographyQueue[selectedAlbumIndex];
+  const chooseAlbum = (index: number) => {
+    const boundedIndex = Math.max(0, Math.min(discographyQueue.length - 1, index));
+    setSelectedAlbumIndex(boundedIndex);
+    setSelectedTrackIndex(0);
+    setSelectionRequestId((requestId) => requestId + 1);
+  };
+  const openTrack = (albumIndex: number, trackIndex: number) => {
+    const boundedAlbumIndex = Math.max(0, Math.min(discographyQueue.length - 1, albumIndex));
+    setSelectedAlbumIndex(boundedAlbumIndex);
+    setSelectedTrackIndex(trackIndex);
+    setSelectionRequestId((requestId) => requestId + 1);
+    setPlaylistOpen(true);
+  };
+  const chooseTrack = (trackIndex: number) => {
+    setSelectedTrackIndex(trackIndex);
+    setSelectionRequestId((requestId) => requestId + 1);
+  };
+  const advanceBlock = () => {
+    if (selectedAlbumIndex < discographyQueue.length - 1) chooseAlbum(selectedAlbumIndex + 1);
+  };
   const startPlaylist = () => {
-    setSelectedAlbumIndex(0);
+    chooseAlbum(0);
     setPlaylistOpen(true);
   };
 
@@ -182,29 +204,29 @@ export default function Home() {
                   <ol className="playlist-albums">
                     {discographyQueue.map((album, index) => (
                       <li key={album.id}>
-                        <button className={index === selectedAlbumIndex ? "playlist-album active" : "playlist-album"} type="button" onClick={() => setSelectedAlbumIndex(index)} aria-current={index === selectedAlbumIndex ? "step" : undefined}>
+                        <button className={index === selectedAlbumIndex ? "playlist-album active" : "playlist-album"} type="button" onClick={() => chooseAlbum(index)} aria-current={index === selectedAlbumIndex ? "step" : undefined}>
                           <span className="playlist-number">{String(index + 1).padStart(2, "0")}</span><span className="playlist-album-title"><strong>{album.title}</strong><small>{album.year} · {album.trackCount} temas · {album.playback.provider}</small></span><Play size={15} aria-hidden="true" />
                         </button>
                         <details className="playlist-track-details" open={index === selectedAlbumIndex}>
-                          <summary>Ver tracklist <span>{album.trackCount} pistas</span></summary>
-                          <ol>{album.tracks.map((track, trackIndex) => <li key={`${album.id}-queue-${trackIndex}`}><span>{String(trackIndex + 1).padStart(2, "0")}</span><span>{track.title}{track.note && <small>{track.note}</small>}</span></li>)}</ol>
+                          <summary>Elegir canción <span>{album.trackCount} pistas</span></summary>
+                          <ol>{album.tracks.map((track, trackIndex) => <li className={index === selectedAlbumIndex && trackIndex === selectedTrackIndex ? "is-current" : undefined} key={`${album.id}-queue-${trackIndex}`}><span>{String(trackIndex + 1).padStart(2, "0")}</span><span><button className="playlist-track-select" type="button" onClick={() => index === selectedAlbumIndex ? chooseTrack(trackIndex) : openTrack(index, trackIndex)} aria-pressed={index === selectedAlbumIndex && trackIndex === selectedTrackIndex}><span>{track.title}</span><Play size={12} aria-hidden="true" /></button>{track.note && <small>{track.note}</small>}</span></li>)}</ol>
                         </details>
                       </li>
                     ))}
                   </ol>
-                  <p className="playlist-hint">Incluye los cuatro álbumes de estudio y el compilado XX, que repite temas y suma dos bonus. La cola intenta pasar sola cuando cada plataforma informa el final.</p>
+                  <p className="playlist-hint">Elegí cualquier tema sin salir de la página. YouTube continúa dentro de sus listas y SoundCloud conserva su reproductor visual para <em>Insoportable</em>; al terminar el último corte, la cola intenta pasar al bloque siguiente.</p>
                 </div>
                 <div className="playlist-player">
                   <div className="playlist-now"><span>EN LA COLA · {String(selectedAlbumIndex + 1).padStart(2, "0")} / {String(discographyQueue.length).padStart(2, "0")}</span><a href={selectedAlbum.playback.sourceUrl} target="_blank" rel="noreferrer">ABRIR EN {selectedAlbum.playback.provider} <ExternalLink size={12} /></a></div>
-                  <h3>{selectedAlbum.title}</h3>
-                  <p className="playlist-subtitle">{selectedAlbum.yearLabel} · {selectedAlbum.trackCount} canciones</p>
-                  <PlaybackQueuePlayer key={selectedAlbum.id} album={selectedAlbum} onEnded={() => setSelectedAlbumIndex((index) => Math.min(discographyQueue.length - 1, index + 1))} />
+                  <h3>{selectedAlbum.tracks[selectedTrackIndex]?.title ?? selectedAlbum.title}</h3>
+                  <p className="playlist-subtitle">{selectedAlbum.title} · {selectedAlbum.yearLabel} · tema {String(selectedTrackIndex + 1).padStart(2, "0")} de {selectedAlbum.trackCount}</p>
+                  <PlaybackQueuePlayer key={selectedAlbum.id} album={selectedAlbum} selectedTrackIndex={selectedTrackIndex} selectionRequestId={selectionRequestId} onTrackChange={(index) => setSelectedTrackIndex((current) => current === index ? current : index)} onEnded={advanceBlock} />
                   <p className="playlist-attribution">{selectedAlbum.playback.note}</p>
                   <div className="playlist-controls">
-                    <button type="button" onClick={() => setSelectedAlbumIndex((index) => Math.max(0, index - 1))} disabled={selectedAlbumIndex === 0}>Anterior</button>
-                    <button className="next-album" type="button" onClick={() => setSelectedAlbumIndex((index) => Math.min(discographyQueue.length - 1, index + 1))} disabled={selectedAlbumIndex === discographyQueue.length - 1}>Siguiente bloque <ArrowUpRight size={14} /></button>
+                    <button type="button" onClick={() => chooseAlbum(selectedAlbumIndex - 1)} disabled={selectedAlbumIndex === 0}>Anterior</button>
+                    <button className="next-album" type="button" onClick={advanceBlock} disabled={selectedAlbumIndex === discographyQueue.length - 1}>Siguiente bloque <ArrowUpRight size={14} /></button>
                   </div>
-                  <p className="player-note">La cola avanza sola si el reproductor comunica el final; “Siguiente bloque” queda de respaldo si un servicio, el navegador o la conexión no permiten ese evento. Los uploads de YouTube son fuentes externas no autenticadas.</p>
+                  <p className="player-note">Las pistas de YouTube son audios de catálogo completos; SoundCloud cubre el set de <em>Insoportable</em>. Las cuentas Topic no se presentan como administradas por la banda. Si una pista no está disponible en tu región, abrí la lista de origen desde arriba.</p>
                 </div>
               </div>
             </section>
@@ -253,7 +275,7 @@ export default function Home() {
                       {album.tracks.map((track, trackIndex) => (
                         <li key={`${album.id}-${trackIndex}`}>
                           <span className="track-number">{String(trackIndex + 1).padStart(2, "0")}</span>
-                          {track.url ? <a href={track.url} target="_blank" rel="noreferrer">{track.title}<ArrowUpRight size={12} aria-hidden="true" /></a> : <span>{track.title}</span>}
+                          <button className="track-select" type="button" onClick={() => openTrack(discographyQueue.findIndex((queuedAlbum) => queuedAlbum.id === album.id), trackIndex)} aria-label={`Reproducir ${track.title} de ${album.title} dentro de la página`}><span>{track.title}</span><Play size={12} aria-hidden="true" /></button>
                           {track.note && <small>{track.note}</small>}
                         </li>
                       ))}
@@ -269,7 +291,7 @@ export default function Home() {
           <article className="compilation-card">
             <div className="compilation-stamp">XX<br /><span>2026</span></div>
             <div className="compilation-copy"><div className="section-label"><span>COMPILADO · NO ES UN QUINTO ÁLBUM</span></div><h3>{compilationXX.title}</h3><p>{compilationXX.note}</p><ExternalLinks links={compilationXX.links} className="source-links" /></div>
-            <details className="compilation-tracks"><summary>Ver las 15 pistas <span>+</span></summary><ol>{compilationXX.tracks.map((track, index) => <li key={track}><span>{String(index + 1).padStart(2, "0")}</span>{track}</li>)}</ol></details>
+            <details className="compilation-tracks"><summary>Elegir entre las 15 pistas <span>+</span></summary><ol>{compilationXX.tracks.map((track, index) => <li key={`${track}-${index}`}><span>{String(index + 1).padStart(2, "0")}</span><button className="track-select" type="button" onClick={() => openTrack(discographyQueue.length - 1, index)} aria-label={`Reproducir ${track} del compilado XX dentro de la página`}><span>{track}</span><Play size={12} aria-hidden="true" /></button></li>)}</ol></details>
           </article>
           <p className="editorial-note"><strong>Nota de lectura.</strong> El cuarto disco, <em>Insoportable</em>, fue editado a fines de 2014 y presentado en 2015 con una formación posterior a la salida de Nacho Obes. La entrevista de Obes en 2026 menciona un trabajo sin edición física, pero no lo nombra; su identificación con <em>Insoportable</em> es probable por fecha y formato, no una cita textual.</p>
         </section>
@@ -313,7 +335,7 @@ export default function Home() {
           <div className="sources-heading"><div><div className="section-label"><span>06</span> / PROCEDENCIA</div><h2>Un archivo abierto.<br /><span>Una fuente a la vista.</span></h2></div><p>Este proyecto no es un sitio oficial ni representa a Doberman, Nacho Obes o sus integrantes. Ordena referencias y enlaza al origen. Las portadas se muestran como referencia de catálogo; los audiovisuales se reproducen desde su plataforma de origen.</p></div>
           <div className="source-groups">{sourceDirectory.map((group) => <div className="source-group" key={group.group}><h3>{group.group}</h3><ExternalLinks links={group.items} className="source-grid" /></div>)}</div>
           <div className="source-legend"><span><i className="legend-solid" /> Hecho documentado / fuente identificable</span><span><i className="legend-outline" /> Atribución o fecha pendiente</span><span><FileText size={14} /> Las notas editoriales no sustituyen a los originales</span></div>
-          <div className="profile-strip"><span>PERFILES CONSULTADOS</span><a href={sources.instagram.url} target="_blank" rel="noreferrer">Instagram · @doberman.uy <ExternalLink size={13} /></a><a href={sources.soundcloudProfile.url} target="_blank" rel="noreferrer">SoundCloud · catálogo histórico <ExternalLink size={13} /></a><a href={sources.spotifyArtist.url} target="_blank" rel="noreferrer">Spotify · catálogo indexado <ExternalLink size={13} /></a></div>
+          <div className="profile-strip"><span>FUENTES DE CATÁLOGO</span><a href={sources.instagram.url} target="_blank" rel="noreferrer">Instagram · @doberman.uy <ExternalLink size={13} /></a><a href={sources.soundcloudProfile.url} target="_blank" rel="noreferrer">SoundCloud · catálogo histórico <ExternalLink size={13} /></a><a href={sources.youtubeDebut.url} target="_blank" rel="noreferrer">YouTube · lista de álbum <ExternalLink size={13} /></a></div>
         </section>
       </main>
 

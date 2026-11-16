@@ -2,10 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { discographyQueue } from "@/data/playlist";
 
 type QueueAlbum = (typeof discographyQueue)[number];
-type YouTubePlayer = { playVideo: () => void; destroy: () => void };
+type YouTubePlayer = {
+  loadPlaylist: (playlist: string[] | { list: string; listType?: string; index?: number }, index?: number, startSeconds?: number) => void;
+  getPlaylist: () => string[];
+  getPlaylistIndex: () => number;
+  destroy: () => void;
+};
 type YouTubeEvent = { data: number; target: YouTubePlayer };
 type YouTubeApi = {
-  PlayerState: { ENDED: number };
+  PlayerState: { ENDED: number; PLAYING: number };
   Player: new (
     iframe: HTMLIFrameElement,
     options: {
@@ -22,45 +27,30 @@ type SoundCloudWidget = {
   unbind: (event: string) => void;
   getCurrentSoundIndex: (callback: (index: number) => void) => void;
   getSounds: (callback: (sounds: unknown[]) => void) => void;
+  skip: (soundIndex: number) => void;
+  play: () => void;
 };
 type SoundCloudApi = {
   Widget: {
     (iframe: HTMLIFrameElement): SoundCloudWidget;
-    Events: { READY: string; FINISH: string };
+    Events: { READY: string; PLAY: string; FINISH: string };
   };
-};
-type SpotifyUpdate = {
-  isPaused?: boolean;
-  isBuffering?: boolean;
-  duration?: number;
-  position?: number;
-  playingURI?: string;
-};
-type SpotifyController = {
-  addListener: (event: "ready" | "playback_update" | "playback_started", listener: (event?: { data?: SpotifyUpdate }) => void) => void;
-  play: () => void;
-  destroy: () => void;
-};
-type SpotifyApi = {
-  createController: (
-    element: HTMLElement,
-    options: { uri: string; width: string; height: number },
-    callback: (controller: SpotifyController) => void,
-  ) => void;
 };
 type ApiWindow = Window & {
   YT?: YouTubeApi;
   SC?: SoundCloudApi;
-  __dobermanSpotifyApi?: SpotifyApi;
   onYouTubeIframeAPIReady?: () => void;
-  onSpotifyIframeApiReady?: (api: SpotifyApi) => void;
 };
-
-type Props = { album: QueueAlbum; onEnded: () => void };
+type Props = {
+  album: QueueAlbum;
+  selectedTrackIndex: number;
+  selectionRequestId: number;
+  onTrackChange: (index: number) => void;
+  onEnded: () => void;
+};
 
 let youtubePromise: Promise<YouTubeApi> | null = null;
 let soundCloudPromise: Promise<SoundCloudApi> | null = null;
-let spotifyPromise: Promise<SpotifyApi> | null = null;
 
 function loadYouTubeApi(): Promise<YouTubeApi> {
   const apiWindow = window as ApiWindow;
@@ -103,57 +93,46 @@ function loadSoundCloudApi(): Promise<SoundCloudApi> {
   return soundCloudPromise;
 }
 
-function loadSpotifyApi(): Promise<SpotifyApi> {
-  const apiWindow = window as ApiWindow;
-  if (apiWindow.__dobermanSpotifyApi) return Promise.resolve(apiWindow.__dobermanSpotifyApi);
-  if (spotifyPromise) return spotifyPromise;
-
-  spotifyPromise = new Promise((resolve, reject) => {
-    const previousReady = apiWindow.onSpotifyIframeApiReady;
-    apiWindow.onSpotifyIframeApiReady = (api) => {
-      apiWindow.__dobermanSpotifyApi = api;
-      previousReady?.(api);
-      resolve(api);
-    };
-    const script = document.createElement("script");
-    script.src = "https://open.spotify.com/embed/iframe-api/v1";
-    script.async = true;
-    script.onerror = () => reject(new Error("No se pudo cargar el control de Spotify."));
-    document.head.appendChild(script);
-  });
-  return spotifyPromise;
-}
-
-function getYouTubeEmbedUrl(sourceUrl: string): string {
-  const videoId = new URL(sourceUrl).searchParams.get("v");
-  if (!videoId) return sourceUrl;
+function getYouTubeEmbedUrl(videoId: string): string {
   const embedUrl = new URL(`https://www.youtube-nocookie.com/embed/${videoId}`);
-  embedUrl.searchParams.set("autoplay", "1");
+  embedUrl.searchParams.set("autoplay", "0");
   embedUrl.searchParams.set("playsinline", "1");
+  embedUrl.searchParams.set("controls", "1");
   embedUrl.searchParams.set("rel", "0");
   embedUrl.searchParams.set("enablejsapi", "1");
   embedUrl.searchParams.set("origin", window.location.origin);
   return embedUrl.toString();
 }
 
-function getSpotifyUri(sourceUrl: string): string {
-  const id = new URL(sourceUrl).pathname.split("/").filter(Boolean).at(-1);
-  return `spotify:album:${id ?? ""}`;
+function getSoundCloudEmbedUrl(sourceUrl: string, startTrack: number): string {
+  const embedUrl = new URL("https://w.soundcloud.com/player/");
+  embedUrl.searchParams.set("url", sourceUrl);
+  embedUrl.searchParams.set("auto_play", "true");
+  embedUrl.searchParams.set("visual", "true");
+  embedUrl.searchParams.set("color", "d44b39");
+  embedUrl.searchParams.set("hide_related", "true");
+  embedUrl.searchParams.set("show_comments", "false");
+  embedUrl.searchParams.set("show_reposts", "false");
+  embedUrl.searchParams.set("show_user", "true");
+  embedUrl.searchParams.set("start_track", String(startTrack));
+  return embedUrl.toString();
 }
 
-export function PlaybackQueuePlayer({ album, onEnded }: Props) {
+export function PlaybackQueuePlayer({ album, selectedTrackIndex, selectionRequestId, onTrackChange, onEnded }: Props) {
   const youtubeFrame = useRef<HTMLIFrameElement>(null);
   const soundCloudFrame = useRef<HTMLIFrameElement>(null);
-  const spotifyMount = useRef<HTMLDivElement>(null);
+  const youtubePlayer = useRef<YouTubePlayer | undefined>(undefined);
+  const soundCloudWidget = useRef<SoundCloudWidget | undefined>(undefined);
+  const selectedTrackRef = useRef(selectedTrackIndex);
+  const onTrackChangeRef = useRef(onTrackChange);
   const onEndedRef = useRef(onEnded);
+  const processedRequest = useRef(selectionRequestId);
   const advanced = useRef(false);
   const [notice, setNotice] = useState("");
-  onEndedRef.current = onEnded;
 
-  useEffect(() => {
-    advanced.current = false;
-    setNotice("");
-  }, [album.id]);
+  selectedTrackRef.current = selectedTrackIndex;
+  onTrackChangeRef.current = onTrackChange;
+  onEndedRef.current = onEnded;
 
   const finishBlock = () => {
     if (advanced.current) return;
@@ -162,37 +141,77 @@ export function PlaybackQueuePlayer({ album, onEnded }: Props) {
   };
 
   useEffect(() => {
+    advanced.current = false;
+    setNotice("");
+    processedRequest.current = selectionRequestId;
+    youtubePlayer.current = undefined;
+    soundCloudWidget.current = undefined;
+  }, [album.id]);
+
+  useEffect(() => {
     if (album.playback.provider !== "YouTube" || !youtubeFrame.current) return;
     let cancelled = false;
     let player: YouTubePlayer | undefined;
+    const videoIds = album.playback.videoIds ?? [];
 
     loadYouTubeApi().then((api) => {
       if (cancelled || !youtubeFrame.current) return;
       player = new api.Player(youtubeFrame.current, {
         events: {
-          onReady: (event) => event.target.playVideo(),
-          onStateChange: (event) => {
-            if (event.data === api.PlayerState.ENDED) finishBlock();
+          onReady: (event) => {
+            youtubePlayer.current = event.target;
+            event.target.loadPlaylist(videoIds, selectedTrackRef.current, 0);
           },
-          onAutoplayBlocked: () => setNotice("El navegador bloqueó el inicio automático. Tocá Play en el reproductor y la cola seguirá al terminar."),
+          onStateChange: (event) => {
+            if (event.data === api.PlayerState.PLAYING) {
+              const currentIndex = event.target.getPlaylistIndex();
+              if (currentIndex >= 0) onTrackChangeRef.current(currentIndex);
+            }
+            if (event.data === api.PlayerState.ENDED) {
+              const playlist = event.target.getPlaylist();
+              const currentIndex = event.target.getPlaylistIndex();
+              if (currentIndex >= 0) onTrackChangeRef.current(currentIndex);
+              if (currentIndex >= 0 && currentIndex === playlist.length - 1) finishBlock();
+            }
+          },
+          onAutoplayBlocked: () => setNotice("El navegador bloqueó el inicio automático. Tocá Play en el reproductor; las canciones siguen dentro de la página."),
         },
       });
-    }).catch(() => setNotice("No se pudo activar el pase automático de YouTube. El botón “Siguiente” queda disponible."));
+      youtubePlayer.current = player;
+    }).catch(() => setNotice("No se pudo cargar la lista de YouTube. Podés abrir la playlist de origen desde el enlace superior."));
 
     return () => {
       cancelled = true;
+      youtubePlayer.current = undefined;
       player?.destroy();
     };
-  }, [album.id, album.playback.provider, album.playback.sourceUrl]);
+  }, [album.id, album.playback.provider]);
 
   useEffect(() => {
     if (album.playback.provider !== "SoundCloud" || !soundCloudFrame.current) return;
     let cancelled = false;
     let widget: SoundCloudWidget | undefined;
+    let readyEvent = "";
+    let playEvent = "";
     let finishEvent = "";
+    let started = false;
+
+    const startPlayback = () => {
+      if (cancelled || started || !widget) return;
+      started = true;
+      if (selectedTrackRef.current > 0) widget.skip(selectedTrackRef.current);
+      widget.play();
+    };
+
+    const onPlay = () => {
+      widget?.getCurrentSoundIndex((currentIndex) => {
+        if (!cancelled && currentIndex >= 0) onTrackChangeRef.current(currentIndex);
+      });
+    };
     const onFinish = () => {
       widget?.getCurrentSoundIndex((currentIndex) => {
         widget?.getSounds((sounds) => {
+          if (!cancelled && currentIndex >= 0) onTrackChangeRef.current(currentIndex);
           if (!cancelled && currentIndex >= 0 && currentIndex === sounds.length - 1) finishBlock();
         });
       });
@@ -201,81 +220,50 @@ export function PlaybackQueuePlayer({ album, onEnded }: Props) {
     loadSoundCloudApi().then((api) => {
       if (cancelled || !soundCloudFrame.current) return;
       widget = api.Widget(soundCloudFrame.current);
+      soundCloudWidget.current = widget;
+      readyEvent = api.Widget.Events.READY;
+      playEvent = api.Widget.Events.PLAY;
       finishEvent = api.Widget.Events.FINISH;
+      widget.bind(readyEvent, startPlayback);
+      widget.bind(playEvent, onPlay);
       widget.bind(finishEvent, onFinish);
-    }).catch(() => setNotice("No se pudo activar el pase automático de SoundCloud. El botón “Siguiente” queda disponible."));
+      widget.getSounds((sounds) => {
+        if (sounds.length > 0) startPlayback();
+      });
+    }).catch(() => setNotice("No se pudo cargar el set de SoundCloud. Podés abrir el álbum de origen desde el enlace superior."));
 
     return () => {
       cancelled = true;
+      if (widget && readyEvent) widget.unbind(readyEvent);
+      if (widget && playEvent) widget.unbind(playEvent);
       if (widget && finishEvent) widget.unbind(finishEvent);
+      soundCloudWidget.current = undefined;
     };
-  }, [album.id, album.playback.provider, album.playback.sourceUrl]);
+  }, [album.id, album.playback.provider]);
 
   useEffect(() => {
-    if (album.playback.provider !== "Spotify" || !spotifyMount.current) return;
-    let cancelled = false;
-    let controller: SpotifyController | undefined;
-    let spotifyTrackStarts = 0;
-
-    loadSpotifyApi().then((api) => {
-      if (cancelled || !spotifyMount.current) return;
-      api.createController(spotifyMount.current, { uri: getSpotifyUri(album.playback.sourceUrl), width: "100%", height: 352 }, (createdController) => {
-        if (cancelled) {
-          createdController.destroy();
-          return;
-        }
-        controller = createdController;
-        controller.addListener("ready", () => {
-          try {
-            controller?.play();
-          } catch {
-            setNotice("Spotify necesita que inicies la reproducción desde sus controles; la cola seguirá cuando detecte el final.");
-          }
-        });
-        controller.addListener("playback_started", (event) => {
-          if (event?.data?.playingURI) spotifyTrackStarts += 1;
-        });
-        controller.addListener("playback_update", (event) => {
-          const playback = event?.data;
-          if (!playback || playback.isBuffering || !playback.isPaused || !playback.duration || playback.position === undefined) return;
-          if (spotifyTrackStarts < album.trackCount) return;
-          // Spotify exposes track updates, not a guaranteed album-finished event; keep this end check narrow.
-          if (playback.position >= playback.duration - 400) finishBlock();
-        });
-      });
-    }).catch(() => setNotice("No se pudo activar el pase automático de Spotify. El botón “Siguiente” queda disponible."));
-
-    return () => {
-      cancelled = true;
-      controller?.destroy();
-    };
-  }, [album.id, album.playback.provider, album.playback.sourceUrl]);
+    if (selectionRequestId === processedRequest.current) return;
+    processedRequest.current = selectionRequestId;
+    const trackIndex = selectedTrackRef.current;
+    if (album.playback.provider === "YouTube" && youtubePlayer.current) {
+      youtubePlayer.current.loadPlaylist(album.playback.videoIds ?? [], trackIndex, 0);
+    } else if (album.playback.provider === "SoundCloud" && soundCloudWidget.current) {
+      soundCloudWidget.current.skip(trackIndex);
+      soundCloudWidget.current.play();
+    }
+  }, [album.playback.provider, selectionRequestId]);
 
   if (album.playback.provider === "YouTube") {
+    const firstVideoId = album.playback.videoIds?.[0] ?? "";
     return (
       <>
         <iframe
           ref={youtubeFrame}
-          className="playlist-embed"
-          src={getYouTubeEmbedUrl(album.playback.sourceUrl)}
+          className="playlist-embed youtube-embed"
+          src={getYouTubeEmbedUrl(firstVideoId)}
           title={`${album.title} · reproductor de YouTube`}
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-          referrerPolicy="strict-origin-when-cross-origin"
-        />
-        {notice && <p className="player-status" role="status">{notice}</p>}
-      </>
-    );
-  }
-
-  if (album.playback.provider === "SoundCloud") {
-    return (
-      <>
-        <iframe
-          ref={soundCloudFrame}
-          className="playlist-embed"
-          src={album.playback.embedUrl}
-          title={`${album.title} · reproductor de SoundCloud`}
-          allow="autoplay; encrypted-media; picture-in-picture"
+          allowFullScreen
           referrerPolicy="strict-origin-when-cross-origin"
         />
         {notice && <p className="player-status" role="status">{notice}</p>}
@@ -285,7 +273,14 @@ export function PlaybackQueuePlayer({ album, onEnded }: Props) {
 
   return (
     <>
-      <div ref={spotifyMount} className="playlist-embed spotify-embed" aria-label={`${album.title} · reproductor de Spotify`} />
+      <iframe
+        ref={soundCloudFrame}
+        className="playlist-embed soundcloud-embed"
+        src={getSoundCloudEmbedUrl(album.playback.sourceUrl, selectedTrackIndex)}
+        title={`${album.title} · reproductor de SoundCloud con selector de canciones`}
+        allow="autoplay; encrypted-media; picture-in-picture"
+        referrerPolicy="strict-origin-when-cross-origin"
+      />
       {notice && <p className="player-status" role="status">{notice}</p>}
     </>
   );
