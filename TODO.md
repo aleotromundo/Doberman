@@ -27,4 +27,4 @@
 - [x] `pnpm check`, `pnpm test`, `pnpm run build:static` y `git diff --check` pasan.
 - [x] El preview muestra los cinco bloques/61 cortes; se verificó la selección de un tema YouTube y el embed SoundCloud con índice de pista.
 - [x] El código visible no conserva el enlace del video roto ni reproductores o enlaces Spotify.
-- [ ] Publicar en `main` del repo existente y confirmar el despliegue de Vercel.
+- [x] El commit `6ddc632` está publicado en `main`; Vercel reporta despliegue completo y el dominio actual sirve el bundle nuevo con HTTP 200.
