@@ -1,77 +1,49 @@
-# A.N.I.M.A.L. — Archivo Audiovisual
+# DOBERMAN — Archivo abierto
 
-## Implementación
+## Alcance editorial y técnico
 
-Sitio web editorial responsive, sin base de datos en esta primera etapa. El catálogo vive en datos tipados dentro del frontend para permitir una primera publicación rápida y una futura migración a CMS, JSON versionado o base de datos. YouTube se integra de manera responsable con miniaturas, enlaces y embeds; no se descarga ni redistribuye material protegido.
+El proyecto reutiliza el front-end React/Vite del repo existente y lo convierte en un archivo independiente sobre la banda uruguaya de hard rock Doberman. La experiencia es estática y pública: no requiere cuentas, servidor ni base de datos en esta etapa. Los datos editoriales se mantienen tipados y versionados en `client/src/data/doberman.ts`; cada grupo de afirmaciones incluye enlaces a la fuente que lo respalda y notas de certeza cuando hay variantes.
 
-La home concentra la experiencia de descubrimiento: hero audiovisual con embed de YouTube silenciado, manifiesto editorial, accesos a categorías, una selección de registros y una cronología resumida. El catálogo se consulta mediante búsqueda y filtros por categoría, etapa y nivel de verificación. Cada registro conserva por separado el año del registro y la fecha de publicación.
-
-Estructura principal:
-
-- `client/src/pages/Home.tsx`: experiencia editorial, catálogo, filtros y cronología.
-- `client/src/index.css`: sistema visual oscuro, responsive y animaciones.
-- `client/public/manus-routes.json`: manifiesto de rutas públicas.
-- `sources/`: espacio reservado para futuras fichas y fuentes verificadas.
-- `plan.md` y `TODO.md`: decisiones y alcance vivo del proyecto.
+El archivo cubre los cuatro álbumes documentados —*Doberman* (2005), *El Último En Pie* (2007), *Tren Calavera* (2011) e *Insoportable* (2014, presentado en 2015)— y separa el compilado *XX (Edición Especial 20 Años)* (2026). Las secciones reúnen tracklists, audiovisual enlazado o embebido, entrevistas y prensa, cronología de integrantes/etapas y fuentes. El inventario es amplio y trazable, pero no afirma que “todo Internet” fue cubierto; las lagunas quedan indicadas.
 
 ## Dirección visual
 
-### Tres opciones consideradas
+- **Dirección:** archivo musical nocturno y minimalista; tipografía editorial condensada, imagen documental y pocos elementos de interfaz.
+- **Principios:** primero la música y los archivos; navegación simple; datos con fuentes visibles; incertidumbre expresada con honestidad; lectura rápida en móvil.
+- **Paleta:** carbón y grafito como fondo, blanco cálido para lectura, rojo óxido para acciones y ámbar para notas de archivo. El rojo se usa en pequeñas dosis.
+- **Composición:** portada audiovisual a sangre con video de fondo silenciado; texto de alto contraste; secciones editoriales asimétricas, discografía por álbum y cronología lineal. No depender de una grilla uniforme de tarjetas.
+- **Elementos distintivos:** wordmark tipográfico DOBERMAN, marca breve `D/`, etiquetas de año/procedencia, artes de portadas con crédito y enlace a la ficha de origen.
+- **Interacción:** navegación por anclas; búsqueda de álbumes, canciones y piezas; tracklists desplegables; cola única ordenada por fecha que cambia entre reproductores de plataformas distintas.
+- **Movimiento:** video ambiental silenciado con imagen de respaldo; desactivación cuando `prefers-reduced-motion` está activo. Animación suave de entrada y hover, sin parpadeo.
+- **Tipografía:** Barlow Condensed para títulos y numeración; Space Grotesk para cuerpo; IBM Plex Mono para etiquetas técnicas.
+- **Esencia y voz:** archivo independiente para volver a escuchar y ubicar la historia de Doberman; directo, oscuro y cuidadoso. Rioplatense, breve y sin marketing inflado: “El ruido quedó registrado” / “Cuatro discos. Cada tema, con su rastro”.
+- **Marca gráfica:** DOBERMAN en tipografía condensada y `D/` como marca secundaria; no se inventa un símbolo canino ni se sugiere afiliación oficial.
 
-- Archivo de concreto y VHS: 0.07 — textura de archivo, rojo de alerta y composición de fanzine.
-- **Metal editorial de fin de siglo: 0.86** — negro carbón, tipografía condensada, rojo vivo y capas de transmisión.
-- Museo digital brutalista: 0.05 — blanco crudo, grilla rígida y contraste documental.
+## Contenido y evidencia
 
-### Design Movement
+La discografía de estudio suma 46 temas distribuidos en cuatro álbumes. Se conservan variantes de título donde las fuentes difieren; no se corrige una grafía sin evidencia. *XX* se presenta como compilado retrospectivo de 15 pistas, no como quinto álbum de estudio. La cola de escucha reúne esos 46 cortes y agrega el compilado como bloque final; el total de 61 incluye repeticiones, remasterizaciones y bonus, no equivale a 61 canciones inéditas. *Insoportable* se presenta como cuarto álbum documentado de 2014, presentado en vivo en 2015. Que sea el trabajo sin edición física al que alude Nacho Obes en 2026 es una identificación razonable por cronología y formato digital, pero no una identificación textual explícita en esa entrevista.
 
-Metal editorial de fin de siglo: una mezcla de archivo televisivo, afiche de recital y sala de escucha digital.
+Las fuentes de banda, plataformas, prensa y catálogos colaborativos se distinguen por tipo. “Oficial” solo se usa cuando la fuente o el propio upload lo declara; la autenticidad de algunos uploaders queda abierta. No se reproducen letras ni se descargan canciones o videos protegidos. El sitio no reemplaza ni representa a la banda.
 
-### Principios
+## Escucha continuada desde la portada
 
-1. La energía de la banda entra por la imagen, pero la información se lee con precisión.
-2. El archivo distingue evidencia, procedencia y memoria; nunca presenta una conjetura como certeza.
-3. La navegación se siente como recorrer una discoteca viva, no como completar un formulario.
-4. Cada bloque debe poder crecer sin perder el hilo editorial.
+El botón Play abre una única cola cronológica con cinco bloques: los cuatro álbumes de estudio y el compilado *XX* de 2026. Al llegar al final de un bloque, el reproductor intenta iniciar el siguiente aunque la fuente cambie de YouTube a Spotify o SoundCloud. El [API de YouTube](https://developers.google.com/youtube/iframe_api_reference) expone el estado `ENDED`; el [widget de SoundCloud](https://developers.soundcloud.com/docs/api/html5-widget) emite `FINISH` y permite consultar el índice de la última pista; el [iFrame API de Spotify](https://developer.spotify.com/documentation/embeds/references/iframe-api) informa cambios de reproducción y permite solicitar `play()`.
 
-### Color Philosophy
+El paso automático depende de que cada proveedor exponga el evento y de que el navegador permita autoplay. Spotify no ofrece una señal inequívoca de fin de álbum en el embed: el sitio espera haber recibido eventos de inicio para todas las pistas y usa como mejor esfuerzo una actualización en pausa dentro de los últimos 400 ms del tema. Si se saltea parte del disco o faltan eventos, puede no avanzar; una pausa manual exactamente al final también podría confundirse con el fin del bloque. Spotify puede requerir iniciar sesión o tocar Play dentro del embed. El botón “Siguiente bloque” queda como respaldo si una política del navegador, el acceso o una falla de red impide el pase automático. No se descargan ni se vuelven a alojar las pistas.
 
-El negro carbón funciona como soporte de archivo nocturno. El rojo señaliza energía, acción y material confirmado. El hueso envejecido da una lectura editorial y evita el aspecto genérico de una interfaz negra. Los tonos verdes y ámbar quedan reservados para estados de verificación y procedencia.
+## Estructura
 
-### Layout Paradigm
+- `client/src/pages/Home.tsx`: portada, navegación y secciones interactivas.
+- `client/src/components/PlaybackQueuePlayer.tsx`: embeds y eventos de fin de YouTube, Spotify y SoundCloud.
+- `client/src/data/doberman.ts`: discos, canciones, cronología, audiovisuales, prensa, perfiles y fuentes con URLs.
+- `client/src/data/playlist.ts`: secuencia de escucha y reproductores disponibles por bloque.
+- `client/src/index.css`: identidad visual, responsive, movimiento y accesibilidad.
+- `client/public/archive/`: artes e imagen editorial con atribución en la interfaz.
+- `client/index.html`: metadatos y contenido de respaldo legible antes de ejecutar React.
+- `client/public/manus-routes.json`: ruta pública raíz.
+- `sources/`: notas de investigación y referencias editoriales.
+- `vercel.json`: build Vite estático desde `dist/public`, fallback SPA y caché de assets.
 
-Composición de manifiesto vertical: hero a sangre, bloques asimétricos, numeración lateral y una línea de tiempo que atraviesa la página. Se evita una grilla uniforme de tarjetas como estructura dominante.
+## Entrega
 
-### Signature Elements
-
-- Etiquetas técnicas en mayúsculas con tracking amplio, como rótulos de archivo.
-- Línea roja de señal que conecta hero, catálogo y cronología.
-- Tarjetas de video con numeración, estado de verificación y miniatura como ficha de videoteca.
-
-### Interaction Philosophy
-
-La interfaz responde con desplazamientos cortos, subrayados rojos y estados visibles. Los filtros no esconden resultados: muestran cuántos registros quedan y explican la procedencia. El hover revela contexto, no solo decoración.
-
-### Animation
-
-Entrada suave del hero; scanlines y ruido muy sutiles; tarjetas que elevan 4px al pasar; timeline que marca el periodo activo sin parpadeo. Respeto por `prefers-reduced-motion`.
-
-### Typography System
-
-`Barlow Condensed` para titulares y numeración. `Space Grotesk` para interfaz y cuerpo. Las etiquetas técnicas usan `IBM Plex Mono`.
-
-### Brand Essence
-
-Un archivo audiovisual argentino para volver a mirar la historia de A.N.I.M.A.L. con energía y criterio. Directo, intenso, documental.
-
-### Brand Voice
-
-- “No es nostalgia: es evidencia en movimiento.”
-- “Buscá por año, formación o procedencia. El archivo sigue abierto.”
-
-### Wordmark & Logo
-
-Wordmark basado en `A.N.I.M.A.L.` con puntos tratados como remaches de una placa metálica; el monograma `A/` funciona como marca compacta para navegación.
-
-### Signature Brand Color
-
-Rojo señal `#e7472e`, usado como hilo conductor y no como relleno masivo.
+Se conserva el stack y lockfile existentes. Vercel compila el front-end mediante `pnpm run build:static` y publica `dist/public`; no se agregan servicios de base de datos, OAuth ni claves. La publicación va al repo existente y a la rama `main`, conservando el historial. El slug remoto no se renombra en este cambio porque podría interrumpir su vínculo actual con Vercel.

@@ -1,14 +1,26 @@
-# A.N.I.M.A.L. — Archivo Audiovisual
+# DOBERMAN — Archivo abierto
 
-React / Express / tRPC / Drizzle starter, adapted from the Sandbox web-db-user template.
+Archivo editorial independiente sobre la banda uruguaya de hard rock Doberman. Reúne los álbumes y sus canciones, cronología, entrevistas, material audiovisual y enlaces a las fuentes, distinguiendo lo confirmado de lo que sigue en investigación.
 
-- `pnpm dev`: development server; honors `PORT` (default 3000).
-- `pnpm build` / `pnpm start`: build and serve `dist/index.js` and `dist/public/`.
-- `pnpm db:migrate`: apply checked-in migrations. `pnpm db:push`: generate and apply new schema changes.
-- `pnpm check` / `pnpm test`: types and application tests.
+La portada incluye una cola cronológica de cinco bloques: cuatro álbumes de estudio con 46 temas y el compilado *XX* de 2026 con 15 cortes. Al terminar cada bloque, el sitio intenta continuar con el siguiente aunque cambie de YouTube a Spotify o SoundCloud. Los 61 cortes incluyen repeticiones y bonus de *XX*; no son 61 canciones únicas. YouTube y SoundCloud informan el final de sus videos o sets. Spotify no garantiza un evento de fin de álbum: la cola espera señales del inicio de las pistas y estima el fin al recibir una pausa en los últimos 400 ms; si se saltea el disco o faltan eventos, el pase puede no ocurrir, y una pausa manual justo allí también podría avanzarlo. El navegador o una sesión no autenticada pueden bloquear autoplay; queda un control “Siguiente bloque” de respaldo.
 
-Start with the Webdev skill's default-template guide. Platform login, storage, payments and service contracts live in its shared references; read the relevant capability before extending its helper.
+## Desarrollo
 
-`server/_core/publicConfig.ts` exposes only named public runtime values. Private keys stay server-side. The platform serves managed `/manus-storage/` assets; the application does not register a second proxy.
+- `pnpm dev:static`: Vite en modo desarrollo para el front-end estático (puerto 3000 por defecto).
+- `pnpm run build:static`: compila el sitio público en `dist/public`.
+- `pnpm check`: chequeo de TypeScript.
+- `pnpm test`: pruebas disponibles del repo.
 
-Platform configuration is readable and editable through `webdev.config`. Default settings are initial values, not enforced constraints. The agent may modify the files, commands and configuration or follow the flexible guide for another stack.
+Vercel usa `vercel.json` para publicar `dist/public` con fallback para la SPA. La home no requiere servidor, base de datos ni credenciales. Los embeds de video y audio permanecen en el proveedor de origen; no se descargan ni distribuyen canciones o videos. Las subidas de YouTube con uploader no autenticado se identifican como tales; Spotify puede pedir iniciar sesión o tocar Play desde sus controles.
+
+## Estructura
+
+- `client/src/pages/Home.tsx`: navegación, portada y cola interactiva de escucha.
+- `client/src/components/PlaybackQueuePlayer.tsx`: eventos de fin y cambio automático de bloque en YouTube, SoundCloud y Spotify.
+- `client/src/data/doberman.ts`: discos, temas, cronología, audiovisuales, prensa y fuentes.
+- `client/src/data/playlist.ts`: bloques cronológicos y reproductores disponibles.
+- `client/src/index.css`: identidad visual, responsive, movimiento y accesibilidad.
+- `client/public/archive/`: material visual archivístico con atribución en la interfaz.
+- `sources/`: notas y referencias editoriales.
+
+El repo conserva su historial previo. El contenido del sitio y el nombre del paquete se orientan ahora a Doberman; el slug remoto no se cambia para evitar interrumpir la integración actual con Vercel.

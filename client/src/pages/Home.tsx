@@ -1,218 +1,323 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowDown,
   ArrowUpRight,
   CalendarDays,
-  Check,
-  ChevronDown,
-  CircleHelp,
   Disc3,
   ExternalLink,
-  Filter,
+  FileText,
   Menu,
+  Music2,
   Play,
   Search,
   X,
 } from "lucide-react";
+import {
+  albums,
+  compilationXX,
+  mediaItems,
+  pressItems,
+  sourceDirectory,
+  sources,
+  timeline,
+  type SourceLink,
+} from "@/data/doberman";
+import { discographyQueue } from "@/data/playlist";
+import { PlaybackQueuePlayer } from "@/components/PlaybackQueuePlayer";
 
-type Category = "Recitales" | "Entrevistas" | "Videoclips" | "Archivo oficial";
-type Confidence = "Confirmado" | "Probable" | "Pendiente";
+const heroVideoId = "wm_2XtoKa1E";
+const mediaFilters = ["Todo", "Videoclips", "En vivo", "Álbum completo", "Redes"] as const;
+type MediaFilter = (typeof mediaFilters)[number];
 
-type VideoRecord = {
-  id: string;
-  title: string;
-  category: Category;
-  year: number;
-  published: string;
-  stage: string;
-  place: string;
-  source: string;
-  duration: string;
-  confidence: Confidence;
-  songs: string[];
-  note: string;
-};
-
-const records: VideoRecord[] = [
-  {
-    id: "xkhSeICzvcQ",
-    title: "Show completo — CM Vivo 2002",
-    category: "Recitales",
-    year: 2002,
-    published: "2015",
-    stage: "ANIMAL 6 / Combativo",
-    place: "CM Vivo",
-    source: "Archivo de medio",
-    duration: "43:12",
-    confidence: "Confirmado",
-    songs: ["El nuevo camino del hombre", "Gritemos para no olvidar", "Loco pro"],
-    note: "Registro televisivo completo publicado por CM, con fecha del show indicada en la descripción.",
-  },
-  {
-    id: "zkOE6ofhkbI",
-    title: "Legado — Official Video",
-    category: "Videoclips",
-    year: 2025,
-    published: "2025",
-    stage: "Íntimo extremo / etapa actual",
-    place: "Buenos Aires",
-    source: "Producción oficial",
-    duration: "04:09",
-    confidence: "Confirmado",
-    songs: ["Legado"],
-    note: "Video oficial con producción ejecutiva de Sony Music Argentina. Audio grabado en Romaphonic en octubre de 2024.",
-  },
-  {
-    id: "IxgRlGEaVKo",
-    title: "Aura — Video Oficial 2021 (4K)",
-    category: "Archivo oficial",
-    year: 2021,
-    published: "2021",
-    stage: "Una razón para seguir",
-    place: "Archivo oficial",
-    source: "ANIMAL Oficial",
-    duration: "03:27",
-    confidence: "Confirmado",
-    songs: ["Aura"],
-    note: "Parte de la videografía remasterizada publicada por el canal oficial.",
-  },
-  {
-    id: "yRJOnusS22I",
-    title: "El nuevo camino del hombre — Video Oficial 2021 (4K)",
-    category: "Archivo oficial",
-    year: 1996,
-    published: "2021",
-    stage: "El nuevo camino del hombre",
-    place: "Archivo oficial",
-    source: "ANIMAL Oficial",
-    duration: "03:55",
-    confidence: "Confirmado",
-    songs: ["El nuevo camino del hombre"],
-    note: "La ficha conserva el año de publicación en YouTube separado del año histórico de la canción.",
-  },
-  {
-    id: "Q9xrXMIgc0o",
-    title: "Esperando el final — Video Oficial 2021 (4K)",
-    category: "Archivo oficial",
-    year: 1994,
-    published: "2021",
-    stage: "Fin de un mundo enfermo",
-    place: "Archivo oficial",
-    source: "ANIMAL Oficial",
-    duration: "03:40",
-    confidence: "Probable",
-    songs: ["Esperando el final"],
-    note: "El canal oficial declara que su videografía remasterizada rescata materiales de beta cam y otros archivos.",
-  },
-  {
-    id: "gVygD3zQCPU",
-    title: "Entrevista a Andrés Giménez: necesitamos ser felices como banda",
-    category: "Entrevistas",
-    year: 2024,
-    published: "2024",
-    stage: "Etapa actual",
-    place: "Entrevista audiovisual",
-    source: "Medio / entrevista",
-    duration: "—",
-    confidence: "Probable",
-    songs: [],
-    note: "Entrevista reciente localizada en YouTube; la fecha exacta del registro requiere ficha editorial propia.",
-  },
-];
-
-const stages = [
-  { year: "1992—1995", title: "Nace el ruido", text: "Del disco homónimo a Fin de un mundo enfermo: identidad, mensaje y el primer salto de formación." },
-  { year: "1996—1999", title: "Poder latino", text: "El nuevo camino del hombre, MTV, festivales y la expansión continental de una banda sin permiso." },
-  { year: "2001—2006", title: "Combativo", text: "Cambios de sonido, nuevas formaciones y el cierre de la primera gran etapa." },
-  { year: "2015—hoy", title: "Una razón para seguir", text: "El regreso, nuevas canciones y una videografía oficial que vuelve a ordenar el archivo." },
-];
-
-const categories = ["Todo", "Recitales", "Entrevistas", "Videoclips", "Archivo oficial"] as const;
-
-function confidenceClass(confidence: Confidence) {
-  return confidence === "Confirmado" ? "is-confirmed" : confidence === "Probable" ? "is-probable" : "is-pending";
+function ExternalLinks({ links, className = "source-links" }: { links: SourceLink[]; className?: string }) {
+  return (
+    <div className={className}>
+      {links.map((link) => (
+        <a key={`${link.label}-${link.url}`} href={link.url} target="_blank" rel="noreferrer">
+          {link.label}<ExternalLink size={13} aria-hidden="true" />
+        </a>
+      ))}
+    </div>
+  );
 }
 
 export default function Home() {
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<(typeof categories)[number]>("Todo");
-  const [stage, setStage] = useState("Todas las etapas");
-  const [confidence, setConfidence] = useState("Todos los estados");
-  const [mobileMenu, setMobileMenu] = useState(false);
+  const [mediaFilter, setMediaFilter] = useState<MediaFilter>("Todo");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [playlistOpen, setPlaylistOpen] = useState(false);
+  const [selectedAlbumIndex, setSelectedAlbumIndex] = useState(0);
+  const dialogRef = useRef<HTMLElement>(null);
 
-  const filteredRecords = useMemo(() => records.filter((record) => {
-    const haystack = [record.title, record.category, record.stage, record.place, record.source, ...record.songs].join(" ").toLowerCase();
-    return haystack.includes(query.toLowerCase())
-      && (category === "Todo" || record.category === category)
-      && (stage === "Todas las etapas" || record.stage === stage)
-      && (confidence === "Todos los estados" || record.confidence === confidence);
-  }), [category, confidence, query, stage]);
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(mediaQuery.matches);
+    update();
+    mediaQuery.addEventListener("change", update);
+    return () => mediaQuery.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (!playlistOpen) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = dialogRef.current;
+    dialog?.querySelector<HTMLElement>(".playlist-close")?.focus();
+    const handleDialogKeys = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPlaylistOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), iframe, summary, [tabindex]:not([tabindex='-1'])"));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", handleDialogKeys);
+    return () => {
+      window.removeEventListener("keydown", handleDialogKeys);
+      if (previousFocus?.isConnected) previousFocus.focus();
+    };
+  }, [playlistOpen]);
+
+  const filteredAlbums = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("es");
+    if (!normalized) return albums;
+    return albums.filter((album) =>
+      [album.title, album.year, album.era, album.note, ...album.tracks.map((track) => track.title)]
+        .join(" ")
+        .toLocaleLowerCase("es")
+        .includes(normalized),
+    );
+  }, [query]);
+
+  const filteredMedia = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("es");
+    return mediaItems.filter((item) => {
+      const matchesText = !normalized || [item.title, item.type, item.year, item.description, item.sourceLabel]
+        .join(" ").toLocaleLowerCase("es").includes(normalized);
+      return matchesText && (mediaFilter === "Todo" || item.category === mediaFilter);
+    });
+  }, [mediaFilter, query]);
+
+  const closeMenu = () => setMenuOpen(false);
+  const trackTotal = albums.reduce((sum, album) => sum + album.trackCount, 0);
+  const queueTotal = discographyQueue.reduce((sum, album) => sum + album.trackCount, 0);
+  const selectedAlbum = discographyQueue[selectedAlbumIndex];
+  const startPlaylist = () => {
+    setSelectedAlbumIndex(0);
+    setPlaylistOpen(true);
+  };
 
   return (
     <div className="site-shell">
       <header className="topbar">
-        <a className="wordmark" href="#inicio" aria-label="A.N.I.M.A.L. Archivo Audiovisual">
-          <span className="wordmark-mark">A/</span>
-          <span><b>A.N.I.M.A.L.</b><small>ARCHIVO AUDIOVISUAL</small></span>
+        <a className="wordmark" href="#inicio" aria-label="Doberman, volver al inicio">
+          <span className="wordmark-mark">D/</span>
+          <span className="wordmark-text"><strong>DOBERMAN</strong><small>ARCHIVO ABIERTO</small></span>
         </a>
-        <button className="menu-toggle" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Abrir menú">
-          {mobileMenu ? <X size={20} /> : <Menu size={20} />}
+        <button className="menu-toggle" type="button" onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"} aria-expanded={menuOpen}>
+          {menuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
-        <nav className={mobileMenu ? "main-nav is-open" : "main-nav"}>
-          <a href="#archivo" onClick={() => setMobileMenu(false)}>Archivo</a>
-          <a href="#cronologia" onClick={() => setMobileMenu(false)}>Cronología</a>
-          <a href="#fuentes" onClick={() => setMobileMenu(false)}>Fuentes</a>
-          <a href="https://animal.com.ar/" target="_blank" rel="noreferrer" className="nav-external">Sitio oficial <ExternalLink size={13} /></a>
+        <nav className={menuOpen ? "main-nav is-open" : "main-nav"} aria-label="Navegación principal">
+          <a href="#discografia" onClick={closeMenu}>Discografía</a>
+          <a href="#archivo" onClick={closeMenu}>Archivo</a>
+          <a href="#cronologia" onClick={closeMenu}>Cronología</a>
+          <a href="#prensa" onClick={closeMenu}>Prensa</a>
+          <a href="#fuentes" onClick={closeMenu}>Fuentes</a>
         </nav>
       </header>
 
       <main>
         <section className="hero" id="inicio">
-          <div className="hero-video" aria-hidden="true">
-            <iframe src="https://www.youtube.com/embed/xkhSeICzvcQ?autoplay=1&mute=1&controls=0&loop=1&playlist=xkhSeICzvcQ&modestbranding=1&rel=0" title="Registro audiovisual de A.N.I.M.A.L." />
-          </div>
-          <div className="hero-overlay" />
-          <div className="hero-noise" />
+          <div className="hero-poster" aria-hidden="true" />
+          {!reducedMotion && (
+            <div className="hero-video" aria-hidden="true">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${heroVideoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${heroVideoId}&playsinline=1&rel=0&modestbranding=1`}
+                title="Doberman — Blanco Perfecto, video de archivo"
+                allow="autoplay; encrypted-media; picture-in-picture"
+                referrerPolicy="strict-origin-when-cross-origin"
+                tabIndex={-1}
+              />
+            </div>
+          )}
+          <div className="hero-shade" />
+          <div className="hero-grain" aria-hidden="true" />
           <div className="hero-content">
-            <div className="eyebrow"><span className="signal-dot" /> ARCHIVO ABIERTO / 1992—2025</div>
-            <h1>NO ES<br /><em>NOSTALGIA.</em><br />ES ARCHIVO.</h1>
-            <p className="hero-lead">Una cartografía audiovisual de A.N.I.M.A.L.: recitales, entrevistas, videoclips y registros que siguen haciendo ruido.</p>
+            <p className="eyebrow"><span className="status-dot" /> MONTEVIDEO, URUGUAY · HARD ROCK</p>
+            <h1>DOBERMAN</h1>
+            <p className="hero-subtitle">El ruido quedó registrado.</p>
+            <p className="hero-lead">Cuatro discos. Cada tema, con su rastro. Un archivo independiente para volver a escuchar y encontrar la historia dispersa de la banda.</p>
             <div className="hero-actions">
-              <a className="button button-primary" href="#archivo"><Play size={16} fill="currentColor" /> Explorar el archivo</a>
-              <a className="button button-ghost" href="#cronologia">Ver cronología <ArrowUpRight size={16} /></a>
+              <button className="button button-primary" type="button" onClick={startPlaylist}><Play size={16} fill="currentColor" /> Reproducir catálogo · {queueTotal} cortes</button>
+              <a className="button button-quiet" href="#archivo"><Play size={15} /> Ver archivo audiovisual</a>
+            </div>
+            <a className="hero-credit" href={`https://www.youtube.com/watch?v=${heroVideoId}`} target="_blank" rel="noreferrer">
+              Fondo: “Blanco Perfecto” · upload rotulado videoclip oficial; canal por verificar <ExternalLink size={12} />
+            </a>
+          </div>
+          <div className="hero-bottom"><span>ARCHIVO MUSICAL INDEPENDIENTE</span><span className="hero-rule" /><a href="#discografia">DESLIZAR <ArrowDown size={14} /></a></div>
+          <span className="hero-index">UY / 01—26</span>
+        </section>
+
+        {playlistOpen && (
+          <div className="playlist-backdrop" role="presentation" onClick={() => setPlaylistOpen(false)}>
+            <section ref={dialogRef} className="playlist-dialog" role="dialog" aria-modal="true" aria-labelledby="playlist-title" tabIndex={-1} onClick={(event) => event.stopPropagation()}>
+              <div className="playlist-header">
+                <div><p className="eyebrow"><Disc3 size={14} /> RECORRIDO DE ESCUCHA · ORDEN CRONOLÓGICO</p><h2 id="playlist-title">Toda la discografía.<br /><span>Un bloque a la vez.</span></h2></div>
+                <button className="playlist-close" type="button" onClick={() => setPlaylistOpen(false)} aria-label="Cerrar reproductor"><X size={20} /></button>
+              </div>
+              <div className="playlist-layout">
+                <div className="playlist-queue">
+                  <div className="playlist-total"><strong>{queueTotal}</strong><span>cortes · 5 bloques<br />2005 → 2026</span></div>
+                  <ol className="playlist-albums">
+                    {discographyQueue.map((album, index) => (
+                      <li key={album.id}>
+                        <button className={index === selectedAlbumIndex ? "playlist-album active" : "playlist-album"} type="button" onClick={() => setSelectedAlbumIndex(index)} aria-current={index === selectedAlbumIndex ? "step" : undefined}>
+                          <span className="playlist-number">{String(index + 1).padStart(2, "0")}</span><span className="playlist-album-title"><strong>{album.title}</strong><small>{album.year} · {album.trackCount} temas · {album.playback.provider}</small></span><Play size={15} aria-hidden="true" />
+                        </button>
+                        <details className="playlist-track-details" open={index === selectedAlbumIndex}>
+                          <summary>Ver tracklist <span>{album.trackCount} pistas</span></summary>
+                          <ol>{album.tracks.map((track, trackIndex) => <li key={`${album.id}-queue-${trackIndex}`}><span>{String(trackIndex + 1).padStart(2, "0")}</span><span>{track.title}{track.note && <small>{track.note}</small>}</span></li>)}</ol>
+                        </details>
+                      </li>
+                    ))}
+                  </ol>
+                  <p className="playlist-hint">Incluye los cuatro álbumes de estudio y el compilado XX, que repite temas y suma dos bonus. La cola intenta pasar sola cuando cada plataforma informa el final.</p>
+                </div>
+                <div className="playlist-player">
+                  <div className="playlist-now"><span>EN LA COLA · {String(selectedAlbumIndex + 1).padStart(2, "0")} / {String(discographyQueue.length).padStart(2, "0")}</span><a href={selectedAlbum.playback.sourceUrl} target="_blank" rel="noreferrer">ABRIR EN {selectedAlbum.playback.provider} <ExternalLink size={12} /></a></div>
+                  <h3>{selectedAlbum.title}</h3>
+                  <p className="playlist-subtitle">{selectedAlbum.yearLabel} · {selectedAlbum.trackCount} canciones</p>
+                  <PlaybackQueuePlayer key={selectedAlbum.id} album={selectedAlbum} onEnded={() => setSelectedAlbumIndex((index) => Math.min(discographyQueue.length - 1, index + 1))} />
+                  <p className="playlist-attribution">{selectedAlbum.playback.note}</p>
+                  <div className="playlist-controls">
+                    <button type="button" onClick={() => setSelectedAlbumIndex((index) => Math.max(0, index - 1))} disabled={selectedAlbumIndex === 0}>Anterior</button>
+                    <button className="next-album" type="button" onClick={() => setSelectedAlbumIndex((index) => Math.min(discographyQueue.length - 1, index + 1))} disabled={selectedAlbumIndex === discographyQueue.length - 1}>Siguiente bloque <ArrowUpRight size={14} /></button>
+                  </div>
+                  <p className="player-note">La cola avanza sola si el reproductor comunica el final; “Siguiente bloque” queda de respaldo si un servicio, el navegador o la conexión no permiten ese evento. Los uploads de YouTube son fuentes externas no autenticadas.</p>
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+
+        <section className="intro section-pad">
+          <div className="section-label"><span>01</span> / SOBRE EL ARCHIVO</div>
+          <div className="intro-grid">
+            <h2>Una historia.<br /><span>Muchas huellas.</span></h2>
+            <div className="intro-copy">
+              <p>Doberman nació en Montevideo a comienzos de los 2000. Sus discos, canciones y registros quedaron repartidos entre plataformas, notas de prensa, catálogos y subidas de video.</p>
+              <p>Este archivo los reúne sin hablar en nombre de la banda. La procedencia se muestra al lado de cada dato; cuando una fecha, atribución o grafía no cierra, también queda anotado.</p>
             </div>
           </div>
-          <div className="hero-foot"><span>BUENOS AIRES / ARGENTINA</span><span className="hero-foot-line" /><span>SEÑAL 01 — EN VIVO</span></div>
-        </section>
-
-        <section className="manifesto section-pad">
-          <div className="section-kicker">01 / POR QUÉ ESTE ARCHIVO</div>
-          <div className="manifesto-grid">
-            <h2>La historia no estaba perdida.<br /><span>Estaba dispersa.</span></h2>
-            <div className="manifesto-copy"><p>Durante años, la memoria audiovisual de A.N.I.M.A.L. quedó repartida entre canales, archivos de televisión y subidas de fans. Este sitio la reúne, la ordena y la deja abierta para seguir investigando.</p><p className="muted">Cada registro conserva su procedencia y diferencia el año en que fue filmado del día en que apareció en YouTube. Cuando algo no está confirmado, se dice.</p></div>
+          <div className="stat-line">
+            <div><strong>04</strong><span>álbumes de estudio</span></div>
+            <div><strong>{String(trackTotal).padStart(2, "0")}</strong><span>temas en los cuatro discos</span></div>
+            <div><strong>2001—26</strong><span>huellas cronológicas</span></div>
+            <p>Archivo independiente · última revisión de fuentes: noviembre de 2026</p>
           </div>
-          <div className="stat-strip"><div><strong>159</strong><span>videos en ANIMAL Oficial*</span></div><div><strong>04</strong><span>etapas para recorrer</span></div><div><strong>03</strong><span>niveles de verificación</span></div><small>* cifra visible al consultar el canal, sujeta a cambios.</small></div>
         </section>
 
-        <section className="archive section-pad" id="archivo">
-          <div className="archive-heading"><div><div className="section-kicker">02 / REGISTROS SELECCIONADOS</div><h2>El archivo<br /><span>en movimiento.</span></h2></div><p>Una primera capa de material confirmado y localizado. El catálogo crecerá con cada investigación.</p></div>
-          <div className="filters-panel">
-            <div className="search-field"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar canción, evento, ciudad..." aria-label="Buscar en el archivo" />{query && <button onClick={() => setQuery("")} aria-label="Limpiar búsqueda"><X size={15} /></button>}</div>
-            <div className="select-wrap"><Filter size={15} /><select value={stage} onChange={(event) => setStage(event.target.value)}><option>Todas las etapas</option>{Array.from(new Set(records.map((record) => record.stage))).map((item) => <option key={item}>{item}</option>)}</select><ChevronDown size={15} /></div>
-            <div className="select-wrap"><Check size={15} /><select value={confidence} onChange={(event) => setConfidence(event.target.value)}><option>Todos los estados</option><option>Confirmado</option><option>Probable</option><option>Pendiente</option></select><ChevronDown size={15} /></div>
+        <section className="discography section-pad" id="discografia">
+          <div className="section-heading">
+            <div><div className="section-label"><span>02</span> / DISCOGRAFÍA</div><h2>Cuatro discos.<br /><span>Cuatro momentos.</span></h2></div>
+            <p>Los álbumes de estudio en orden de edición. Buscá por disco o por canción; cada ficha conserva su época, su lista de temas y los enlaces disponibles.</p>
           </div>
-          <div className="category-tabs">{categories.map((item) => <button key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}</button>)}</div>
-          <div className="records-grid">{filteredRecords.map((record, index) => <article className="record-card" key={record.id}><a className="record-thumb" href={`https://www.youtube.com/watch?v=${record.id}`} target="_blank" rel="noreferrer"><img src={`https://i.ytimg.com/vi/${record.id}/hqdefault.jpg`} alt="" /><span className="play-badge"><Play size={16} fill="currentColor" /></span><span className="record-index">0{index + 1}</span></a><div className="record-body"><div className="record-meta"><span className={`confidence ${confidenceClass(record.confidence)}`}>{record.confidence}</span><span>{record.category}</span></div><h3>{record.title}</h3><div className="record-facts"><span><CalendarDays size={13} /> registro {record.year}</span><span><Disc3 size={13} /> publicado {record.published}</span></div><p>{record.note}</p><div className="record-footer"><span>{record.source}</span><a href={`https://www.youtube.com/watch?v=${record.id}`} target="_blank" rel="noreferrer">Ver en YouTube <ArrowUpRight size={14} /></a></div></div></article>)}</div>{filteredRecords.length === 0 && <div className="empty-state"><CircleHelp size={20} /> No encontramos registros con esos filtros. Probá con otra búsqueda.</div>}
+          <label className="search-box album-search"><Search size={17} aria-hidden="true" /><span className="sr-only">Buscar en la discografía</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar álbum, tema o año…" /><span className="search-count">{filteredAlbums.length} / {albums.length} discos</span>{query && <button type="button" onClick={() => setQuery("")} aria-label="Limpiar búsqueda"><X size={15} /></button>}</label>
+          <div className="album-list">
+            {filteredAlbums.map((album, index) => (
+              <article className="album-card" key={album.id}>
+                <div className="album-art-wrap">
+                  {album.cover ? <img className="album-art" src={album.cover} alt={`Arte de portada de ${album.title}, ${album.year}`} loading="lazy" /> : <div className="album-art album-art-type" aria-label={`Ficha tipográfica de ${album.title}`}><span>DOBERMAN</span><strong>{album.title}</strong><small>{album.year} / UY</small></div>}
+                  {album.coverCredit && <a className="art-credit" href={album.coverCredit.url} target="_blank" rel="noreferrer">ARTE / FUENTE <ExternalLink size={11} /></a>}
+                </div>
+                <div className="album-info">
+                  <div className="album-overline"><span>0{index + 1}</span><span>{album.yearLabel}</span></div>
+                  <h3>{album.title}</h3>
+                  <div className="album-meta"><span><CalendarDays size={13} /> {album.year}</span><span><Music2 size={13} /> {album.trackCount} temas</span><span>{album.era}</span></div>
+                  <p className="album-note">{album.note}</p>
+                  <p className="evidence-note">{album.confidence}</p>
+                  <details className="track-details" open={Boolean(query)}>
+                    <summary><span>Lista de temas</span><span>{album.trackCount} pistas <span className="summary-plus">+</span></span></summary>
+                    <ol className="track-list">
+                      {album.tracks.map((track, trackIndex) => (
+                        <li key={`${album.id}-${trackIndex}`}>
+                          <span className="track-number">{String(trackIndex + 1).padStart(2, "0")}</span>
+                          {track.url ? <a href={track.url} target="_blank" rel="noreferrer">{track.title}<ArrowUpRight size={12} aria-hidden="true" /></a> : <span>{track.title}</span>}
+                          {track.note && <small>{track.note}</small>}
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
+                  <ExternalLinks links={album.links} className="album-sources" />
+                </div>
+              </article>
+            ))}
+            {filteredAlbums.length === 0 && <p className="empty-state">No aparece ese término en la discografía. Probá con el nombre de una canción.</p>}
+          </div>
+
+          <article className="compilation-card">
+            <div className="compilation-stamp">XX<br /><span>2026</span></div>
+            <div className="compilation-copy"><div className="section-label"><span>COMPILADO · NO ES UN QUINTO ÁLBUM</span></div><h3>{compilationXX.title}</h3><p>{compilationXX.note}</p><ExternalLinks links={compilationXX.links} className="source-links" /></div>
+            <details className="compilation-tracks"><summary>Ver las 15 pistas <span>+</span></summary><ol>{compilationXX.tracks.map((track, index) => <li key={track}><span>{String(index + 1).padStart(2, "0")}</span>{track}</li>)}</ol></details>
+          </article>
+          <p className="editorial-note"><strong>Nota de lectura.</strong> El cuarto disco, <em>Insoportable</em>, fue editado a fines de 2014 y presentado en 2015 con una formación posterior a la salida de Nacho Obes. La entrevista de Obes en 2026 menciona un trabajo sin edición física, pero no lo nombra; su identificación con <em>Insoportable</em> es probable por fecha y formato, no una cita textual.</p>
         </section>
 
-        <section className="timeline section-pad" id="cronologia">
-          <div className="section-kicker">03 / CRONOLOGÍA AUDIOVISUAL</div><div className="timeline-heading"><h2>Cuatro momentos.<br /><span>Un mismo pulso.</span></h2><p>La cronología no reemplaza la investigación histórica: funciona como mapa para volver a cada registro y abrir nuevas preguntas.</p></div>
-          <div className="timeline-list">{stages.map((item, index) => <div className="timeline-item" key={item.year}><div className="timeline-rail"><span>0{index + 1}</span><i /></div><div className="timeline-content"><span className="timeline-year">{item.year}</span><h3>{item.title}</h3><p>{item.text}</p><a href="#archivo">Explorar registros <ArrowUpRight size={14} /></a></div></div>)}</div>
+        <section className="media-archive section-pad" id="archivo">
+          <div className="section-heading">
+            <div><div className="section-label"><span>03</span> / ARCHIVO AUDIOVISUAL</div><h2>Imagen, sonido<br /><span>y procedencia.</span></h2></div>
+            <p>Una selección inicial de videoclips, sesiones y registros. Los videos siguen en sus plataformas originales; ninguna subida se convierte en “oficial” por estar enlazada aquí.</p>
+          </div>
+          <div className="filter-row" role="group" aria-label="Filtrar audiovisuales">
+            {mediaFilters.map((filter) => <button key={filter} className={mediaFilter === filter ? "filter-chip active" : "filter-chip"} type="button" onClick={() => setMediaFilter(filter)}>{filter}</button>)}
+            <span className="filter-result">{filteredMedia.length} registros</span>
+          </div>
+          <div className="media-grid">
+            {filteredMedia.map((item, index) => (
+                <article className="media-card" key={item.url}>
+                  <a className="media-thumb" href={item.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${item.title} en su fuente`}>
+                  {item.url.includes("youtube.com/watch?v=") ? <img src={`https://i.ytimg.com/vi/${item.url.split("v=")[1]?.split("&")[0] ?? heroVideoId}/hqdefault.jpg`} alt="" loading="lazy" onError={(event) => { event.currentTarget.src = "/archive/tren-calavera-2011.jpg"; }} /> : <div className="media-art-placeholder" aria-hidden="true"><span>D/</span><small>{item.year}</small></div>}
+                  <span className="media-play"><Play size={16} fill="currentColor" /></span><span className="media-number">0{index + 1}</span>
+                </a>
+                <div className="media-card-body"><div className="media-meta"><span>{item.category}</span><span>{item.year}</span></div><h3>{item.title}</h3><p>{item.description}</p><div className="media-credit"><span>{item.confidence}</span><a href={item.url} target="_blank" rel="noreferrer">{item.sourceLabel}<ArrowUpRight size={13} /></a></div></div>
+              </article>
+            ))}
+          </div>
+          {filteredMedia.length === 0 && <p className="empty-state">No encontramos material con esos filtros.</p>}
         </section>
 
-        <section className="sources section-pad" id="fuentes"><div className="sources-mark">A/</div><div><div className="section-kicker">04 / PROCEDENCIA</div><h2>Un archivo vivo<br /><span>se verifica.</span></h2><p>Este sitio no reemplaza a la banda ni copia sus páginas. Reúne referencias, describe cada pieza y deriva siempre al origen. Los embeds se reservan para reproductores de YouTube; fotos, recortes, notas y páginas externas se consultan desde su fuente original.</p><div className="official-links"><a href="https://animal.com.ar/" target="_blank" rel="noreferrer"><strong>animal.com.ar</strong><span>Web oficial · discos, videos, tour, biografía y tienda</span><ExternalLink size={15} /></a><a href="https://www.youtube.com/channel/UCC8mb3b5v1lDZ90AiGtVrzQ" target="_blank" rel="noreferrer"><strong>YouTube oficial enlazado por la web</strong><span>Canal oficial referido desde animal.com.ar</span><ExternalLink size={15} /></a><a href="https://www.youtube.com/channel/UCHxF_L8DfnvtccfQx2qZbhA" target="_blank" rel="noreferrer"><strong>ANIMAL Oficial</strong><span>Canal con videografía remasterizada · relación editorial a confirmar</span><ExternalLink size={15} /></a></div><div className="legend"><span><i className="legend-dot confirmed" /> Confirmado</span><span><i className="legend-dot probable" /> Probable</span><span><i className="legend-dot pending" /> Pendiente</span></div></div></section>
+        <section className="timeline-section section-pad" id="cronologia">
+          <div className="section-heading timeline-intro"><div><div className="section-label"><span>04</span> / CRONOLOGÍA</div><h2>Una banda,<br /><span>distintas etapas.</span></h2></div><p>Fechas y transiciones atribuidas a fuentes identificables. Un plan anunciado no se presenta como un concierto realizado; un recuerdo retrospectivo se identifica como tal.</p></div>
+          <div className="timeline-list">
+            {timeline.map((item, index) => <article className="timeline-item" key={`${item.year}-${item.title}`}><div className="timeline-marker"><span>0{index + 1}</span><i /></div><div className="timeline-entry"><time>{item.year}</time><h3>{item.title}</h3><p>{item.text}</p><a href={item.source.url} target="_blank" rel="noreferrer">Fuente: {item.source.label}<ArrowUpRight size={13} /></a></div></article>)}
+          </div>
+        </section>
+
+        <section className="press-section section-pad" id="prensa">
+          <div className="section-heading"><div><div className="section-label"><span>05</span> / ENTREVISTAS Y PRENSA</div><h2>La banda<br /><span>en sus palabras.</span></h2></div><p>Entrevistas, anuncios de discos y notas de regreso. Se enlaza cada pieza al medio que la publicó y se conserva la fecha original.</p></div>
+          <div className="press-list">{pressItems.map((item, index) => <article className="press-item" key={item.url}><span className="press-index">0{index + 1}</span><div className="press-main"><div className="press-meta"><span>{item.outlet}</span><time>{item.date}</time></div><h3>{item.title}</h3><p>{item.text}</p></div><a className="press-open" href={item.url} target="_blank" rel="noreferrer" aria-label={`Leer ${item.title} en ${item.outlet}`}><ArrowUpRight size={20} /></a></article>)}</div>
+        </section>
+
+        <section className="sources-section section-pad" id="fuentes">
+          <div className="sources-heading"><div><div className="section-label"><span>06</span> / PROCEDENCIA</div><h2>Un archivo abierto.<br /><span>Una fuente a la vista.</span></h2></div><p>Este proyecto no es un sitio oficial ni representa a Doberman, Nacho Obes o sus integrantes. Ordena referencias y enlaza al origen. Las portadas se muestran como referencia de catálogo; los audiovisuales se reproducen desde su plataforma de origen.</p></div>
+          <div className="source-groups">{sourceDirectory.map((group) => <div className="source-group" key={group.group}><h3>{group.group}</h3><ExternalLinks links={group.items} className="source-grid" /></div>)}</div>
+          <div className="source-legend"><span><i className="legend-solid" /> Hecho documentado / fuente identificable</span><span><i className="legend-outline" /> Atribución o fecha pendiente</span><span><FileText size={14} /> Las notas editoriales no sustituyen a los originales</span></div>
+          <div className="profile-strip"><span>PERFILES CONSULTADOS</span><a href={sources.instagram.url} target="_blank" rel="noreferrer">Instagram · @doberman.uy <ExternalLink size={13} /></a><a href={sources.soundcloudProfile.url} target="_blank" rel="noreferrer">SoundCloud · catálogo histórico <ExternalLink size={13} /></a><a href={sources.spotifyArtist.url} target="_blank" rel="noreferrer">Spotify · catálogo indexado <ExternalLink size={13} /></a></div>
+        </section>
       </main>
 
-      <footer className="footer"><span>A.N.I.M.A.L. / ARCHIVO AUDIOVISUAL</span><span>HECHO PARA VOLVER A MIRAR</span><a href="#inicio">↑ Arriba</a></footer>
+      <footer className="footer"><a className="footer-brand" href="#inicio">D/ <strong>DOBERMAN</strong></a><span>ARCHIVO INDEPENDIENTE · MONTEVIDEO, URUGUAY</span><a href="#inicio">VOLVER ARRIBA ↑</a></footer>
     </div>
   );
 }
