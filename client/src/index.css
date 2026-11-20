@@ -416,3 +416,8 @@ img { display: block; max-width: 100%; }
 @keyframes live-mouth { from { transform: scaleY(1); } to { transform: scaleY(2.4); } }
 @media (prefers-reduced-motion: reduce) { .live-stage .live-ring, .live-stage .live-mouth { animation: none !important; } }
 .chat-bubble a { color: inherit; text-decoration: underline; text-underline-offset: 3px; word-break: break-all; }
+/* Con el sitio al 125% en escritorio, el panel se achica para entrar completo en la pantalla. */
+@media (min-width: 900px) {
+  .chat-panel { zoom: .8; height: min(520px, calc(100vh - 40px)); bottom: 16px; right: 16px; }
+  .chat-fab { zoom: .8; }
+}
