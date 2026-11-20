@@ -7,7 +7,6 @@ import {
   ExternalLink,
   FileText,
   Menu,
-  MessageCircle,
   Music2,
   Play,
   Search,
@@ -269,7 +268,6 @@ export default function Home() {
         </section>
 
         <ArchiveChat />
-        <a className="chat-fab" href="#chat" aria-label="Ir al chat del archivo"><MessageCircle size={18} aria-hidden="true" /><span>Preguntá</span></a>
 
         <section className="discography section-pad" id="discografia">
           <div className="section-heading">
