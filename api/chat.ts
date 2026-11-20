@@ -3,7 +3,7 @@
 import { albums, bandProfile, compilationXX, pressItems, sourceDirectory, timeline } from "../client/src/data/doberman";
 
 // Se prueban en orden: si un modelo no existe, no está disponible o da error de cuota, se pasa al siguiente.
-// Modelos con nivel gratuito según foros y guías de 2026 (ver sources/doberman-research.md).
+// Modelos con nivel gratuito según foros y guías de 2026.
 const MODELS = [
   "gemini-3.8-flash",
   "gemini-3.6-flash",
