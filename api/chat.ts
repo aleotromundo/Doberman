@@ -3,8 +3,12 @@
 import { albums, bandProfile, compilationXX, pressItems, sourceDirectory, timeline } from "../client/src/data/doberman";
 
 // Se prueban en orden: si un modelo no existe, no está disponible o da error de cuota, se pasa al siguiente.
+// Primero los nombres verificados en la documentación oficial; después los de la lista original.
 const MODELS = [
+  "gemini-3.1-flash-lite",
+  "gemini-2.5-flash-lite",
   "gemini-3-flash-preview",
+  "gemini-2.5-flash",
   "gemini-3-pro",
   "gemini-3-flash-8b",
   "gemini-3-flash",
@@ -111,13 +115,17 @@ export default async function handler(req: any, res: any) {
   });
 
   try {
+    const failures: string[] = [];
     for (const model of MODELS) {
       const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
         body: payload,
       });
-      if (!upstream.ok) continue;
+      if (!upstream.ok) {
+        failures.push(`${model}: ${upstream.status}`);
+        continue;
+      }
 
       const data: any = await upstream.json();
       const reply: string = data?.candidates?.[0]?.content?.parts?.map((part: any) => part.text ?? "").join("") ?? "";
@@ -125,7 +133,8 @@ export default async function handler(req: any, res: any) {
         return res.status(200).json({ reply });
       }
     }
-    return res.status(502).json({ error: "No pude responder ahora. Probá de nuevo en un rato." });
+    console.error("Gemini: ningún modelo respondió", failures.join(" | "));
+    return res.status(502).json({ error: `No pude responder ahora (${failures[0] ?? "sin respuesta"}). Probá de nuevo en un rato.` });
   } catch {
     return res.status(502).json({ error: "No pude responder ahora. Probá de nuevo en un rato." });
   }
