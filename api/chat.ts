@@ -51,7 +51,8 @@ Reglas:
 - Distinguí lo confirmado de lo incierto, y mencioná las discrepancias entre fuentes cuando existan.
 - Respondé de forma breve y ordenada: 2 a 6 oraciones, o una lista corta si hay varios datos. Solo extendete si la persona pide detalle.
 - Cuando cites una fuente, escribí su URL completa para que la persona pueda abrirla.
-- Podés hablar de otros temas, pero dejá en claro cuando una respuesta sale del archivo.
+- Tenés búsqueda web. Usala para datos actuales o que no estén en el archivo, y citá las fuentes con su URL.
+- Podés hablar de otros temas, pero dejá en claro cuando una respuesta sale del archivo o de la web.
 - No reproduzcas letras de canciones ni fragmentos largos de textos de prensa; resumí con tus palabras.
 - No sos la banda ni hablás en su nombre. Si te preguntan por la opinión de los integrantes, aclará que no la tenés.
 
@@ -103,23 +104,36 @@ async function handle(req: any, res: any) {
       parts: [{ text: message.content }],
     })),
     generationConfig: { maxOutputTokens: 1200, temperature: 0.4 },
+    tools: [{ google_search: {} }],
   });
+  const payloadNoTools = JSON.stringify({ ...JSON.parse(payload), tools: undefined });
 
   try {
     const failures: string[] = [];
     for (const model of MODELS) {
-      const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-        body: payload,
-      });
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+      const headers = { "Content-Type": "application/json", "x-goog-api-key": apiKey };
+      let upstream = await fetch(url, { method: "POST", headers, body: payload });
+      if (!upstream.ok) {
+        // Si la búsqueda web no está disponible para este modelo, reintenta sin ella.
+        upstream = await fetch(url, { method: "POST", headers, body: payloadNoTools });
+      }
       if (!upstream.ok) {
         failures.push(`${model}: ${upstream.status}`);
         continue;
       }
 
       const data: any = await upstream.json();
-      const reply: string = data?.candidates?.[0]?.content?.parts?.map((part: any) => part.text ?? "").join("") ?? "";
+      let reply: string = data?.candidates?.[0]?.content?.parts?.map((part: any) => part.text ?? "").join("") ?? "";
+      const chunks: any[] = data?.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
+      const webSources = chunks
+        .map((chunk) => chunk?.web)
+        .filter((web) => web?.uri)
+        .slice(0, 5)
+        .map((web) => `- ${web.title ?? web.uri}: ${web.uri}`);
+      if (reply.trim() && webSources.length > 0 && !reply.includes("Fuentes web:")) {
+        reply = `${reply.trim()}\n\nFuentes web:\n${webSources.join("\n")}`;
+      }
       if (reply.trim()) {
         return res.status(200).json({ reply });
       }

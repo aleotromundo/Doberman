@@ -1,9 +1,12 @@
 // Genera client/public/archive-context.json a partir de los datos del archivo.
 // Lo corre `pnpm run build:static` antes de compilar el sitio; la función /api/chat lo lee desde el propio dominio.
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { albums, bandProfile, compilationXX, pressItems, sourceDirectory, timeline } from "../client/src/data/doberman";
 
+const notas = ["sources/doberman-research.md", "sources/doberman-playback.md"].map((file) => readFileSync(file, "utf-8"));
+
 const data = {
+  notasDeInvestigacion: notas,
   perfil: bandProfile.map(({ label, text, source }) => ({ tema: label, texto: text, fuente: source.url })),
   discos: albums.map((album) => ({
     titulo: album.title,
