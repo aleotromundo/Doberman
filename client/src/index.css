@@ -140,6 +140,7 @@ img { display: block; max-width: 100%; }
 .archive-chat-form input { flex: 1; min-height: 46px; padding: 0 4px; border: 0; background: transparent; color: var(--text); font: 14px var(--body, inherit); outline: none; }
 .archive-chat-form button { width: 46px; border: 0; background: transparent; color: var(--accent); cursor: pointer; }
 .archive-chat-form button:disabled { color: #55534e; cursor: default; }
+@media (min-width: 900px) { body { zoom: 1.25; } }
 .track-details { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .track-details summary, .compilation-tracks summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; color: #d3cfc7; cursor: pointer; list-style: none; font: 9px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
 .track-details summary::-webkit-details-marker, .compilation-tracks summary::-webkit-details-marker, .playlist-track-details summary::-webkit-details-marker { display: none; }
