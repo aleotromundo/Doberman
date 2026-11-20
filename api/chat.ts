@@ -50,7 +50,8 @@ function buildArchiveContext(): string {
   return JSON.stringify(data);
 }
 
-const SYSTEM_PROMPT = `Sos el asistente del "Archivo abierto" de Doberman, una banda uruguaya de hard rock de Montevideo.
+function buildSystemPrompt(): string {
+  return `Sos el asistente del "Archivo abierto" de Doberman, una banda uruguaya de hard rock de Montevideo.
 Respondé siempre en español rioplatense, claro y breve.
 
 Reglas:
@@ -63,6 +64,7 @@ Reglas:
 
 Archivo (JSON):
 ${buildArchiveContext()}`;
+}
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -79,7 +81,7 @@ function sanitize(input: unknown): ChatMessage[] | null {
   return messages;
 }
 
-export default async function handler(req: any, res: any) {
+async function handle(req: any, res: any) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Método no permitido." });
@@ -102,7 +104,7 @@ export default async function handler(req: any, res: any) {
   }
 
   const payload = JSON.stringify({
-    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    systemInstruction: { parts: [{ text: buildSystemPrompt() }] },
     contents: messages.map((message) => ({
       role: message.role === "assistant" ? "model" : "user",
       parts: [{ text: message.content }],
@@ -134,5 +136,14 @@ export default async function handler(req: any, res: any) {
   } catch (err: any) {
     console.error("Chat: error al llamar a Gemini", err);
     return res.status(502).json({ error: `No pude responder ahora (${err?.name ?? "error"}: ${String(err?.message ?? "").slice(0, 120)}). Probá de nuevo en un rato.` });
+  }
+}
+
+export default async function handler(req: any, res: any) {
+  try {
+    return await handle(req, res);
+  } catch (err: any) {
+    console.error("Chat: error inesperado", err);
+    return res.status(500).json({ error: `Error interno del chat (${err?.name ?? "error"}: ${String(err?.message ?? "").slice(0, 160)}).` });
   }
 }
