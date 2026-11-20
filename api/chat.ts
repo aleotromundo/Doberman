@@ -3,16 +3,12 @@
 import { albums, bandProfile, compilationXX, pressItems, sourceDirectory, timeline } from "../client/src/data/doberman";
 
 // Se prueban en orden: si un modelo no existe, no está disponible o da error de cuota, se pasa al siguiente.
-// Primero los nombres verificados en la documentación oficial; después los de la lista original.
+// Modelos con nivel gratuito según foros y guías de 2026 (ver sources/doberman-research.md).
 const MODELS = [
+  "gemini-3.8-flash",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash-lite",
   "gemini-3.1-flash-lite",
-  "gemini-2.5-flash-lite",
-  "gemini-3-flash-preview",
-  "gemini-2.5-flash",
-  "gemini-3-pro",
-  "gemini-3-flash-8b",
-  "gemini-3-flash",
-  "gemini-1.5-flash",
 ];
 const MAX_MESSAGES = 10;
 const MAX_CHARS = 1500;
