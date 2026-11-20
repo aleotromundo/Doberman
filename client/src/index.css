@@ -369,3 +369,5 @@ img { display: block; max-width: 100%; }
 }
 .archive-chat-voice { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; border: 0; background: transparent; color: #86847e; font: 9px var(--mono); letter-spacing: .04em; text-transform: uppercase; cursor: pointer; }
 .archive-chat-voice[aria-pressed="true"] { color: var(--accent); }
+.chat-fab { position: fixed; right: 22px; bottom: 22px; z-index: 40; display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 18px; border-radius: 999px; background: var(--accent); color: #fff; font: 800 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; text-decoration: none; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+.chat-fab:hover, .chat-fab:focus-visible { filter: brightness(1.08); }
