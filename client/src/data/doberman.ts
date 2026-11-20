@@ -41,6 +41,9 @@ export const sources = {
   cdRelease2005: { label: "Discogs · imagen/registro del CD de 2005", url: "https://www.discogs.com/release/11137878-Doberman-Doberman", type: "Catálogo" as const },
   cdRelease2007: { label: "Discogs · imagen/registro del CD de 2007", url: "https://www.discogs.com/release/11416414-Doberman-El-%C3%9Altimo-En-Pie", type: "Catálogo" as const },
   sietenotasProfile: { label: "SieteNotas · perfil de Doberman (sin fecha)", url: "https://sietenotas.com/Interpretes/interprete.aspx?i=3A381547-D2D9-4E2D-8BC7-4FDC31456542", type: "Banda / perfil" as const },
+  graffiti2006: { label: "Premios Graffiti · ganadores 2006", url: "https://www.premiosgraffiti.com.uy/ganadores/ganadores-2006/", type: "Prensa" as const },
+  graffiti2012: { label: "Premios Graffiti · ganadores 2012", url: "https://www.premiosgraffiti.com.uy/ganadores/ganadores-2012/", type: "Prensa" as const },
+  metronomoTren2026: { label: "Metrónomo · reedición de Tren Calavera (mayo 2026)", url: "https://metronomo.uy/2026/05/19/lanzamientos-carlos-casacuberta-la-chancha-charlie-cromo-doberman-cossi-y-mancuso-las-malas-lenguas/", type: "Prensa" as const },
   montevideo2020Obes: { label: "Montevideo Portal · entrevista a Nacho Obes (22 may 2020)", url: "https://www.montevideo.com.uy/Tiempo-libre/Nacho-Obes-esta-en-el-centro-de-una-tormenta-mediatica-que-el-mismo-se-propuso-dominar-uc753470", type: "Prensa" as const },
 } satisfies Record<string, SourceLink>;
 
@@ -57,7 +60,10 @@ export const albums: Album[] = [
     cover: "/archive/doberman-2005.jpeg",
     coverCredit: sources.cdRelease2005,
     lineup: "Formación de época según Nacho Obes: Obes, Andrés Mozzo, Germán Seoane y Matías Kramer. El perfil no fechado de SieteNotas lista los mismos cuatro nombres.",
-    credits: ["Nota de producción en la ficha de Discogs: Federico Langwagen y Doberman."],
+    credits: [
+      "Nota de producción en la ficha de Discogs: Federico Langwagen y Doberman.",
+      "Premio Graffiti 2006 a Revelación del año, listado como “Doberman – Doberman”.",
+    ],
     links: [sources.discogsDebut, sources.elPais2005, sources.soundclick, sources.youtubeDebut],
     tracks: [
       { title: "Actitud" }, { title: "Entre Ceja y Ceja" }, { title: "Hermosa Judas" }, { title: "La Piel Del Lobo", note: "Demo de 2002 según Obes. El perfil no fechado de SieteNotas indica que fue regrabada en Sondor con el técnico Daniel Baéz (Octopus)." },
@@ -95,7 +101,11 @@ export const albums: Album[] = [
     confidence: "Diez temas contrastados · variantes de grafía en fuentes",
     cover: "/archive/tren-calavera-2011.jpg",
     coverCredit: sources.discogsTren,
-    credits: ["Grabado en Estudios InZen, con técnico Javier Longhi y drum doctor Irvin Carballo. Dato informado por la reedición digital de 2026 (Cooltivarte), no comprobado con el libreto de 2011."],
+    lineup: "Nacho Obes como frontman. Sobre el bajo hay fuentes en conflicto: Metrónomo (2026) atribuye la incorporación de Federico Delfino al bajo en esta etapa; el perfil no fechado de SieteNotas lo atribuye a Obes.",
+    credits: [
+      "Grabado en Estudios InZen, con técnico Javier Longhi y drum doctor Irvin Carballo. Dato informado por la reedición digital de 2026 (Cooltivarte), no comprobado con el libreto de 2011.",
+      "Premio Graffiti 2012 a Mejor Álbum de Metal y Hard Rock, listado como “Tren calavera” de Doberman.",
+    ],
     links: [sources.discogsTren, sources.youtubeTren, sources.cooltivarteTren],
     tracks: [
       { title: "Tren Calavera" }, { title: "Animal" }, { title: "Blanco Perfecto", note: "El videoclip existe como pieza audiovisual aparte del audio de álbum." },
@@ -129,6 +139,9 @@ export const bandProfile: { label: string; text: string; source: SourceLink }[] 
   { label: "Estudio y técnicos", text: "“La Piel del Lobo” fue regrabada en Sondor con el técnico Daniel Baéz (Octopus), según el mismo perfil.", source: sources.sietenotasProfile },
   { label: "Radio en 2002", text: "Una versión rock de “Mi Bandera” sonó en la campaña “Contra el Bajón” de FM 93.9 Océano, según el perfil.", source: sources.sietenotasProfile },
   { label: "Escenarios", text: "El perfil enumera Flanagan's, la Fête de la Musique del Liceo Francés, Club Unión Shangrila, La Comisaría, Amarcord, Katar y Plaza Mateo.", source: sources.sietenotasProfile },
+  { label: "Premios Graffiti", text: "Doberman ganó el premio a Revelación del año en 2006, listado como “Doberman – Doberman”. En 2012, “Tren calavera” ganó el premio a Mejor Álbum de Metal y Hard Rock.", source: sources.graffiti2006 },
+  { label: "Sencillos de Tren Calavera", text: "Según Metrónomo (2026), “Blanco Perfecto”, “Animal”, “Tren Calavera” y “Morir Así” fueron los temas destacados del disco, y llevaron a la banda a su primera producción audiovisual de mayor escala.", source: sources.metronomoTren2026 },
+  { label: "Expansión regional", text: "Según Metrónomo (2026), la banda comenzó a presentarse en Argentina y a recorrer el circuito regional. La nota no indica fechas.", source: sources.metronomoTren2026 },
   { label: "Discrepancia sobre la pausa", text: "Una entrevista a Nacho Obes publicada por Montevideo Portal el 22 de mayo de 2020 dice que Doberman se disolvió en 2014 y tuvo un breve regreso en 2018. Las notas de 2026 describen una pausa sin disolución formal demostrada. El archivo mantiene ambas versiones.", source: sources.montevideo2020Obes },
 ];
 
