@@ -154,9 +154,14 @@ export function ArchiveChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next }),
       });
-      const data = await response.json().catch(() => ({}));
+      const data = await response.json().catch(() => null);
+      if (!data) {
+        setError(`No pude responder ahora (el servidor devolvió HTTP ${response.status}).`);
+        setPhase("idle");
+        return;
+      }
       if (!response.ok) {
-        setError(data.error ?? "No pude responder ahora.");
+        setError(data.error ?? `No pude responder ahora (HTTP ${response.status}).`);
         setPhase("idle");
         return;
       }
