@@ -1,8 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { MessageCircle, Mic, MicOff, Phone, PhoneOff, Send, Volume2, VolumeX, X } from "lucide-react";
+import { MessageCircle, Mic, MicOff, Phone, PhoneOff, RotateCcw, Send, Volume2, VolumeX, X } from "lucide-react";
 
 type Message = { role: "user" | "assistant"; content: string };
 type Phase = "idle" | "listening" | "thinking" | "speaking";
+
+// Convierte los enlaces del texto en links clickeables.
+function linkify(text: string) {
+  return text.split(/(https?:\/\/[^\s)]+)/g).map((part, index) =>
+    /^https?:\/\//.test(part) ? (
+      <a key={index} href={part} target="_blank" rel="noreferrer">{part}</a>
+    ) : (
+      <span key={index}>{part}</span>
+    ),
+  );
+}
 
 const starters = ["¿Qué pasó con Nacho Obes?", "¿Quién tocó en Insoportable?", "¿Qué premios ganó la banda?"];
 
@@ -203,6 +214,9 @@ export function ArchiveChat() {
                   {voiceReplies ? <Volume2 size={16} aria-hidden="true" /> : <VolumeX size={16} aria-hidden="true" />}
                 </button>
               )}
+              {messages.length > 0 && (
+                <button type="button" onClick={() => { setMessages([]); setError(null); setPhase("idle"); }} aria-label="Nueva conversación" title="Nueva conversación"><RotateCcw size={16} aria-hidden="true" /></button>
+              )}
               <button type="button" onClick={() => setOpen(false)} aria-label="Cerrar chat"><X size={16} aria-hidden="true" /></button>
             </div>
           </header>
@@ -226,7 +240,7 @@ export function ArchiveChat() {
                 </div>
               )}
               {messages.map((message, index) => (
-                <div key={index} className={`chat-bubble is-${message.role}`}>{message.content}</div>
+                <div key={index} className={`chat-bubble is-${message.role}`}>{linkify(message.content)}</div>
               ))}
               {busy && <div className="chat-bubble is-assistant is-typing"><span /><span /><span /></div>}
               {error && <p className="chat-panel-error">{error}</p>}
@@ -235,7 +249,7 @@ export function ArchiveChat() {
 
           <form className="chat-panel-form" onSubmit={(event) => { event.preventDefault(); send(draft); }}>
             <label className="sr-only" htmlFor="archive-chat-input">Tu pregunta</label>
-            <input id="archive-chat-input" value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={1500} placeholder={liveMode ? "Modo live activo: hablá con el micrófono" : "Escribí tu pregunta…"} disabled={busy || liveMode} />
+            <input id="archive-chat-input" autoFocus value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={1500} placeholder={liveMode ? "Modo live activo: hablá con el micrófono" : "Escribí tu pregunta…"} disabled={busy || liveMode} />
             {SpeechRecognitionImpl && !liveMode && (
               <button type="button" onClick={toggleListening} disabled={busy} aria-label={listening ? "Dejar de escuchar" : "Preguntar por voz"} aria-pressed={listening}>
                 {listening ? <MicOff size={16} aria-hidden="true" /> : <Mic size={16} aria-hidden="true" />}

@@ -415,3 +415,4 @@ img { display: block; max-width: 100%; }
 @keyframes live-breathe { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
 @keyframes live-mouth { from { transform: scaleY(1); } to { transform: scaleY(2.4); } }
 @media (prefers-reduced-motion: reduce) { .live-stage .live-ring, .live-stage .live-mouth { animation: none !important; } }
+.chat-bubble a { color: inherit; text-decoration: underline; text-underline-offset: 3px; word-break: break-all; }

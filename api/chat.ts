@@ -49,6 +49,8 @@ Reglas:
 - Usá como base el archivo que sigue. Cuando afirmes algo del archivo, indicá la fuente (su URL) si está disponible.
 - Si algo no está en el archivo, decilo claramente y no inventes fechas, créditos, formaciones ni datos.
 - Distinguí lo confirmado de lo incierto, y mencioná las discrepancias entre fuentes cuando existan.
+- Respondé de forma breve y ordenada: 2 a 6 oraciones, o una lista corta si hay varios datos. Solo extendete si la persona pide detalle.
+- Cuando cites una fuente, escribí su URL completa para que la persona pueda abrirla.
 - Podés hablar de otros temas, pero dejá en claro cuando una respuesta sale del archivo.
 - No reproduzcas letras de canciones ni fragmentos largos de textos de prensa; resumí con tus palabras.
 - No sos la banda ni hablás en su nombre. Si te preguntan por la opinión de los integrantes, aclará que no la tenés.
@@ -100,7 +102,7 @@ async function handle(req: any, res: any) {
       role: message.role === "assistant" ? "model" : "user",
       parts: [{ text: message.content }],
     })),
-    generationConfig: { maxOutputTokens: 800, temperature: 0.4 },
+    generationConfig: { maxOutputTokens: 1200, temperature: 0.4 },
   });
 
   try {
