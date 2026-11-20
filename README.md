@@ -11,7 +11,13 @@ La cola recorre cinco bloques en orden: los cuatro álbumes de estudio y el comp
 - `pnpm check`: chequeo de TypeScript.
 - `pnpm test`: pruebas disponibles del repo.
 
-Vercel usa `vercel.json` para publicar `dist/public` con fallback para la SPA. La home no requiere servidor, base de datos ni credenciales. Los embeds de video y audio permanecen en el proveedor de origen; no se descargan ni distribuyen canciones o videos. Las listas Topic son entregas de catálogo auto-generadas; una pista puede no estar disponible en ciertas regiones o dispositivos.
+Vercel usa `vercel.json` para publicar `dist/public` con fallback para la SPA. La base del sitio sigue siendo estática y no requiere base de datos.
+
+**Chat con IA (`api/chat.ts`).** La sección "Preguntale al archivo" llama a una función serverless en `/api/chat`, que consulta el modelo `gemini-3.1-flash-lite` de la API de Google con el contenido de `client/src/data/doberman.ts` como contexto. Requiere una variable de entorno en Vercel (Settings → Environment Variables):
+
+- `GEMINI_API_KEY`: clave de Google AI Studio. Nunca la pongas en el código ni en el repo.
+
+Sin esa variable, el chat muestra un mensaje de "no configurado" y el resto de la página funciona igual. Hay un límite de 20 consultas por hora por IP, de mejor esfuerzo porque la memoria de cada instancia no es compartida. Para un tope real de gasto, configurá un límite mensual en la consola de Google Cloud. Los embeds de video y audio permanecen en el proveedor de origen; no se descargan ni distribuyen canciones o videos. Las listas Topic son entregas de catálogo auto-generadas; una pista puede no estar disponible en ciertas regiones o dispositivos.
 
 ## Estructura
 

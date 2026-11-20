@@ -25,6 +25,7 @@ import {
 } from "@/data/doberman";
 import { discographyQueue } from "@/data/playlist";
 import { PlaybackQueuePlayer } from "@/components/PlaybackQueuePlayer";
+import { ArchiveChat } from "@/components/ArchiveChat";
 
 const heroVideoId = "wm_2XtoKa1E";
 const mediaFilters = ["Todo", "Videoclips", "En vivo", "Álbum completo", "Redes"] as const;
@@ -265,6 +266,8 @@ export default function Home() {
             ))}
           </dl>
         </section>
+
+        <ArchiveChat />
 
         <section className="discography section-pad" id="discografia">
           <div className="section-heading">
