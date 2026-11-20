@@ -9,6 +9,8 @@ const MODELS = [
   "gemini-3.5-flash-lite",
   "gemini-3.1-flash-lite",
 ];
+// Recuerda el último modelo que respondió, así no se prueban los que fallan en cada pregunta.
+let workingModel: string | null = null;
 const MAX_MESSAGES = 10;
 const MAX_CHARS = 1500;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
@@ -39,6 +41,14 @@ async function buildArchiveContext(req: any): Promise<string> {
   if (!response.ok) throw new Error(`no se pudo leer el archivo del sitio (HTTP ${response.status})`);
   cachedArchive = await response.text();
   return cachedArchive;
+}
+
+// Solo activa la búsqueda web si la pregunta parece pedir datos actuales o fechas.
+const NEEDS_WEB = /(hoy|ahora|último|ultimo|última|ultima|próxim|proxim|pr[oó]ximo|siguiente|este año|este mes|reciente|noticia|novedad|show|toque|concierto|gira|fecha|2026|2027|hace poco|actualmente)/i;
+
+function needsWebSearch(messages: ChatMessage[]): boolean {
+  const last = messages[messages.length - 1]?.content ?? "";
+  return NEEDS_WEB.test(last);
 }
 
 async function buildSystemPrompt(req: any): Promise<string> {
@@ -97,53 +107,90 @@ async function handle(req: any, res: any) {
     return res.status(400).json({ error: "Escribí una pregunta para empezar." });
   }
 
-  const payload = JSON.stringify({
+  const useWeb = needsWebSearch(messages);
+  const base = {
     systemInstruction: { parts: [{ text: await buildSystemPrompt(req) }] },
     contents: messages.map((message) => ({
       role: message.role === "assistant" ? "model" : "user",
       parts: [{ text: message.content }],
     })),
     generationConfig: { maxOutputTokens: 1200, temperature: 0.4 },
-    tools: [{ google_search: {} }],
-  });
-  const payloadNoTools = JSON.stringify({ ...JSON.parse(payload), tools: undefined });
+  };
+  const withWeb = JSON.stringify({ ...base, tools: [{ google_search: {} }] });
+  const withoutWeb = JSON.stringify(base);
+  const headers = { "Content-Type": "application/json", "x-goog-api-key": apiKey };
 
-  try {
-    const failures: string[] = [];
-    for (const model of MODELS) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-      const headers = { "Content-Type": "application/json", "x-goog-api-key": apiKey };
-      let upstream = await fetch(url, { method: "POST", headers, body: payload });
-      if (!upstream.ok) {
-        // Si la búsqueda web no está disponible para este modelo, reintenta sin ella.
-        upstream = await fetch(url, { method: "POST", headers, body: payloadNoTools });
-      }
-      if (!upstream.ok) {
-        failures.push(`${model}: ${upstream.status}`);
-        continue;
-      }
+  const order = workingModel ? [workingModel, ...MODELS.filter((m) => m !== workingModel)] : MODELS;
+  const failures: string[] = [];
 
-      const data: any = await upstream.json();
-      let reply: string = data?.candidates?.[0]?.content?.parts?.map((part: any) => part.text ?? "").join("") ?? "";
-      const chunks: any[] = data?.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
-      const webSources = chunks
-        .map((chunk) => chunk?.web)
-        .filter((web) => web?.uri)
-        .slice(0, 5)
-        .map((web) => `- ${web.title ?? web.uri}: ${web.uri}`);
-      if (reply.trim() && webSources.length > 0 && !reply.includes("Fuentes web:")) {
-        reply = `${reply.trim()}\n\nFuentes web:\n${webSources.join("\n")}`;
+  for (const model of order) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
+    let upstream = await fetch(url, { method: "POST", headers, body: useWeb ? withWeb : withoutWeb });
+    if (!upstream.ok && useWeb) {
+      // Si este modelo no admite búsqueda web, reintenta sin ella.
+      upstream = await fetch(url, { method: "POST", headers, body: withoutWeb });
+    }
+    if (!upstream.ok || !upstream.body) {
+      failures.push(`${model}: ${upstream.status}`);
+      continue;
+    }
+
+    // Respuesta en streaming: el texto llega a medida que se genera.
+    workingModel = model;
+    res.status(200);
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+
+    const reader = upstream.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let sentAny = false;
+    const webSources = new Map<string, string>();
+
+    const handleEvent = (json: any) => {
+      const candidate = json?.candidates?.[0];
+      const text: string = (candidate?.content?.parts ?? []).map((part: any) => part.text ?? "").join("");
+      if (text) {
+        sentAny = true;
+        res.write(text);
       }
-      if (reply.trim()) {
-        return res.status(200).json({ reply });
+      for (const chunk of candidate?.groundingMetadata?.groundingChunks ?? []) {
+        if (chunk?.web?.uri) webSources.set(chunk.web.uri, chunk.web.title ?? chunk.web.uri);
+      }
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let newline: number;
+      while ((newline = buffer.indexOf("\n")) >= 0) {
+        const line = buffer.slice(0, newline).trim();
+        buffer = buffer.slice(newline + 1);
+        if (!line.startsWith("data:")) continue;
+        try {
+          handleEvent(JSON.parse(line.slice(5)));
+        } catch {
+          // Evento incompleto o malformado: se ignora.
+        }
       }
     }
-    console.error("Gemini: ningún modelo respondió", failures.join(" | "));
-    return res.status(502).json({ error: `No pude responder ahora (${failures[0] ?? "sin respuesta"}). Probá de nuevo en un rato.` });
-  } catch (err: any) {
-    console.error("Chat: error al llamar a Gemini", err);
-    return res.status(502).json({ error: `No pude responder ahora (${err?.name ?? "error"}: ${String(err?.message ?? "").slice(0, 120)}). Probá de nuevo en un rato.` });
+
+    if (!sentAny) {
+      failures.push(`${model}: sin texto`);
+      continue;
+    }
+
+    if (webSources.size > 0) {
+      const list = [...webSources.entries()].slice(0, 5).map(([uri, title]) => `- ${title}: ${uri}`);
+      res.write(`\n\nFuentes web:\n${list.join("\n")}`);
+    }
+    return res.end();
   }
+
+  console.error("Gemini: ningún modelo respondió", failures.join(" | "));
+  return res.status(502).json({ error: `No pude responder ahora (${failures[0] ?? "sin respuesta"}). Probá de nuevo en un rato.` });
 }
 
 export default async function handler(req: any, res: any) {

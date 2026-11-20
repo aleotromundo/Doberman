@@ -165,19 +165,35 @@ export function ArchiveChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next }),
       });
-      const data = await response.json().catch(() => null);
-      if (!data) {
-        setError(`No pude responder ahora (el servidor devolvió HTTP ${response.status}).`);
+      if (!response.ok || !response.body) {
+        const data = await response.json().catch(() => null);
+        setError(data?.error ?? `No pude responder ahora (HTTP ${response.status}).`);
         setPhase("idle");
         return;
       }
-      if (!response.ok) {
-        setError(data.error ?? `No pude responder ahora (HTTP ${response.status}).`);
+
+      // Respuesta en streaming: se muestra a medida que llega.
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let reply = "";
+      setPhase("speaking");
+      setMessages([...next, { role: "assistant", content: "" }]);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        reply += decoder.decode(value, { stream: true });
+        const current = reply;
+        setMessages([...next, { role: "assistant", content: current }]);
+      }
+      reply += decoder.decode();
+      setMessages([...next, { role: "assistant", content: reply }]);
+      if (!reply.trim()) {
+        setError("No obtuve una respuesta. Probá reformular la pregunta.");
+        setMessages(next);
         setPhase("idle");
         return;
       }
-      setMessages([...next, { role: "assistant", content: data.reply }]);
-      speak(data.reply);
+      speak(reply);
     } catch {
       setError("No hay conexión con el chat. Probá de nuevo.");
       setPhase("idle");
@@ -242,7 +258,9 @@ export function ArchiveChat() {
               {messages.map((message, index) => (
                 <div key={index} className={`chat-bubble is-${message.role}`}>{linkify(message.content)}</div>
               ))}
-              {busy && <div className="chat-bubble is-assistant is-typing"><span /><span /><span /></div>}
+              {busy && (messages[messages.length - 1]?.role === "user" || !messages[messages.length - 1]?.content) && (
+                <div className="chat-bubble is-assistant is-typing"><span /><span /><span /></div>
+              )}
               {error && <p className="chat-panel-error">{error}</p>}
             </div>
           )}
