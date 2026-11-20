@@ -135,7 +135,8 @@ export default async function handler(req: any, res: any) {
     }
     console.error("Gemini: ningún modelo respondió", failures.join(" | "));
     return res.status(502).json({ error: `No pude responder ahora (${failures[0] ?? "sin respuesta"}). Probá de nuevo en un rato.` });
-  } catch {
-    return res.status(502).json({ error: "No pude responder ahora. Probá de nuevo en un rato." });
+  } catch (err: any) {
+    console.error("Chat: error al llamar a Gemini", err);
+    return res.status(502).json({ error: `No pude responder ahora (${err?.name ?? "error"}: ${String(err?.message ?? "").slice(0, 120)}). Probá de nuevo en un rato.` });
   }
 }
