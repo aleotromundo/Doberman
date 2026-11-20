@@ -18,10 +18,18 @@
     <meta name="twitter:description" content="Discografía, cronología y archivo audiovisual de la banda uruguaya Doberman." />
     <meta name="twitter:image" content="https://i.ytimg.com/vi/wm_2XtoKa1E/hqdefault.jpg" />
     <title>Doberman — Archivo abierto</title>
-    <style>html, body { background: #090a0b; }</style>
+    <style>
+      html, body { background: #090a0b; margin: 0; }
+      .boot-loader { position: fixed; inset: 0; display: grid; place-items: center; background: #090a0b; }
+      .boot-loader-mark { position: relative; width: 84px; height: 84px; display: grid; place-items: center; }
+      .boot-loader-mark::before { content: ""; position: absolute; inset: 0; border: 2px solid rgba(184, 85, 58, .18); border-top-color: #b8553a; border-radius: 50%; animation: boot-spin 1s linear infinite; }
+      .boot-loader-mark span { color: #b8553a; font: 800 30px/1 system-ui, -apple-system, "Segoe UI", sans-serif; letter-spacing: -.04em; }
+      @keyframes boot-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { .boot-loader-mark::before { animation-duration: 3s; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="boot-loader" role="status" aria-label="Cargando el archivo"><div class="boot-loader-mark"><span>D/</span></div></div></div>
     <noscript>Este archivo requiere JavaScript para filtrar canciones y explorar sus secciones interactivas. El resumen de discografía permanece visible arriba.</noscript>
     <script src="/api/platform/config.js"></script>
     <script type="module" src="/src/main.tsx"></script>
