@@ -29,28 +29,19 @@ function allowRequest(ip: string): boolean {
   return true;
 }
 
-async function buildArchiveContext(): Promise<string> {
-  const { albums, bandProfile, compilationXX, pressItems, sourceDirectory, timeline } = await import("../client/src/data/doberman");
-  const data = {
-    perfil: bandProfile.map(({ label, text, source }) => ({ tema: label, texto: text, fuente: source.url })),
-    discos: albums.map((album) => ({
-      titulo: album.title,
-      año: album.year,
-      nota: album.note,
-      confianza: album.confidence,
-      formacion: album.lineup,
-      creditos: album.credits,
-      temas: album.tracks.map((track) => (track.note ? `${track.title} (${track.note})` : track.title)),
-    })),
-    compilado: { titulo: compilationXX.title, año: compilationXX.year, nota: compilationXX.note, temas: compilationXX.tracks },
-    cronologia: timeline.map((item) => ({ año: item.year, titulo: item.title, texto: item.text, fuente: item.source.url })),
-    prensa: pressItems.map((item) => ({ titulo: item.title, medio: item.outlet, fecha: item.date, texto: item.text, url: item.url })),
-    fuentes: sourceDirectory.flatMap((group) => group.items.map((item) => ({ nombre: item.label, url: item.url }))),
-  };
-  return JSON.stringify(data);
+let cachedArchive: string | null = null;
+
+// El contexto del archivo se publica como archivo estático junto al sitio (ver scripts/export-archive.ts).
+async function buildArchiveContext(req: any): Promise<string> {
+  if (cachedArchive) return cachedArchive;
+  const host = req.headers?.host ?? "doberman-delta.vercel.app";
+  const response = await fetch(`https://${host}/archive-context.json`);
+  if (!response.ok) throw new Error(`no se pudo leer el archivo del sitio (HTTP ${response.status})`);
+  cachedArchive = await response.text();
+  return cachedArchive;
 }
 
-async function buildSystemPrompt(): Promise<string> {
+async function buildSystemPrompt(req: any): Promise<string> {
   return `Sos el asistente del "Archivo abierto" de Doberman, una banda uruguaya de hard rock de Montevideo.
 Respondé siempre en español rioplatense, claro y breve.
 
@@ -63,7 +54,7 @@ Reglas:
 - No sos la banda ni hablás en su nombre. Si te preguntan por la opinión de los integrantes, aclará que no la tenés.
 
 Archivo (JSON):
-${await buildArchiveContext()}`;
+${await buildArchiveContext(req)}`;
 }
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -104,7 +95,7 @@ async function handle(req: any, res: any) {
   }
 
   const payload = JSON.stringify({
-    systemInstruction: { parts: [{ text: await buildSystemPrompt() }] },
+    systemInstruction: { parts: [{ text: await buildSystemPrompt(req) }] },
     contents: messages.map((message) => ({
       role: message.role === "assistant" ? "model" : "user",
       parts: [{ text: message.content }],
