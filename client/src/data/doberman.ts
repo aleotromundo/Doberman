@@ -11,6 +11,8 @@ export type Album = {
   confidence: string;
   cover?: string;
   coverCredit?: SourceLink;
+  lineup?: string;
+  credits?: string[];
   links: SourceLink[];
   tracks: Track[];
 };
@@ -38,6 +40,8 @@ export const sources = {
   soundclick: { label: "SoundClick · archivo y relato del primer disco", url: "https://www.soundclick.com/dobermanuru", type: "Banda / perfil" as const },
   cdRelease2005: { label: "Discogs · imagen/registro del CD de 2005", url: "https://www.discogs.com/release/11137878-Doberman-Doberman", type: "Catálogo" as const },
   cdRelease2007: { label: "Discogs · imagen/registro del CD de 2007", url: "https://www.discogs.com/release/11416414-Doberman-El-%C3%9Altimo-En-Pie", type: "Catálogo" as const },
+  sietenotasProfile: { label: "SieteNotas · perfil de Doberman (sin fecha)", url: "https://sietenotas.com/Interpretes/interprete.aspx?i=3A381547-D2D9-4E2D-8BC7-4FDC31456542", type: "Banda / perfil" as const },
+  montevideo2020Obes: { label: "Montevideo Portal · entrevista a Nacho Obes (22 may 2020)", url: "https://www.montevideo.com.uy/Tiempo-libre/Nacho-Obes-esta-en-el-centro-de-una-tormenta-mediatica-que-el-mismo-se-propuso-dominar-uc753470", type: "Prensa" as const },
 } satisfies Record<string, SourceLink>;
 
 export const albums: Album[] = [
@@ -52,9 +56,11 @@ export const albums: Album[] = [
     confidence: "Título y año confirmados · orden según ficha CD",
     cover: "/archive/doberman-2005.jpeg",
     coverCredit: sources.cdRelease2005,
+    lineup: "Formación de época según Nacho Obes: Obes, Andrés Mozzo, Germán Seoane y Matías Kramer. El perfil no fechado de SieteNotas lista los mismos cuatro nombres.",
+    credits: ["Nota de producción en la ficha de Discogs: Federico Langwagen y Doberman."],
     links: [sources.discogsDebut, sources.elPais2005, sources.soundclick, sources.youtubeDebut],
     tracks: [
-      { title: "Actitud" }, { title: "Entre Ceja y Ceja" }, { title: "Hermosa Judas" }, { title: "La Piel Del Lobo" },
+      { title: "Actitud" }, { title: "Entre Ceja y Ceja" }, { title: "Hermosa Judas" }, { title: "La Piel Del Lobo", note: "Demo de 2002 según Obes. El perfil no fechado de SieteNotas indica que fue regrabada en Sondor con el técnico Daniel Baéz (Octopus)." },
       { title: "Cruz Del Sur" }, { title: "Yoyogui Sam" }, { title: "Intro (Wallace)" }, { title: "Wallace" },
       { title: "Ave Cesar" }, { title: "Un Vaso En Alto" }, { title: "Nueve Vidas" }, { title: "Sangre De Perdedor" },
     ],
@@ -70,6 +76,7 @@ export const albums: Album[] = [
     confidence: "Título, año y orden según ficha de edición CD",
     cover: "/archive/el-ultimo-en-pie-2007.jpeg",
     coverCredit: sources.cdRelease2007,
+    credits: ["Según una nota del perfil de SieteNotas (sin fecha), la presentación del disco estuvo a cargo de Germán Seoane."],
     links: [sources.discogsUltimo, sources.obesInterview, sources.metronomo2026, sources.youtubeUltimo],
     tracks: [
       { title: "Ángel Caído" }, { title: "Perro Fiel" }, { title: "Jaque Al Rey" }, { title: "Dios Del Rock" },
@@ -88,6 +95,7 @@ export const albums: Album[] = [
     confidence: "Diez temas contrastados · variantes de grafía en fuentes",
     cover: "/archive/tren-calavera-2011.jpg",
     coverCredit: sources.discogsTren,
+    credits: ["Grabado en Estudios InZen, con técnico Javier Longhi y drum doctor Irvin Carballo. Dato informado por la reedición digital de 2026 (Cooltivarte), no comprobado con el libreto de 2011."],
     links: [sources.discogsTren, sources.youtubeTren, sources.cooltivarteTren],
     tracks: [
       { title: "Tren Calavera" }, { title: "Animal" }, { title: "Blanco Perfecto", note: "El videoclip existe como pieza audiovisual aparte del audio de álbum." },
@@ -105,6 +113,7 @@ export const albums: Album[] = [
     trackCount: 12,
     note: "Cuarto álbum documentado. La prensa de 2015 lo presenta como el disco de la formación con Alejandro Llambías y Fernando López; su difusión fue digital y gratuita. La mención de Obes a un álbum posterior sin edición física probablemente corresponde a este trabajo, aunque no lo nombra explícitamente.",
     confidence: "Año, estatus y 12 pistas respaldados por prensa y perfil de la banda",
+    lineup: "Alejandro Llambías (voz) y Fernando López (bajo), con Andrés Mozzo, Germán Seoane y Matías Kramer, según Montevideo Portal (2015). Federico Delfino colaboró en la composición de varios temas, según la misma fuente.",
     links: [sources.diaria2015, sources.montevideoInsoportable, sources.soundcloudSet],
     tracks: [
       { title: "Ni Una Palabra" }, { title: "Molde" }, { title: "Contramano" }, { title: "Igual Que Ayer" },
@@ -112,6 +121,15 @@ export const albums: Album[] = [
       { title: "Nada De Mi" }, { title: "Tiburon" }, { title: "Zombie En Mi Placard" }, { title: "No Va Mas" },
     ],
   },
+];
+
+export const bandProfile: { label: string; text: string; source: SourceLink }[] = [
+  { label: "Origen y estilo", text: "Banda de Montevideo de hard rock. Su perfil la describe como power cuarteto, con influencias de AC/DC y Guns N' Roses.", source: sources.sietenotasProfile },
+  { label: "Formación", text: "El perfil no fechado de SieteNotas lista como integrantes a Nacho Obes (voz y bajo), Matías Kramer (batería), Andrés Mozzo y Germán Seoane (guitarras). No detalla formaciones por época.", source: sources.sietenotasProfile },
+  { label: "Estudio y técnicos", text: "“La Piel del Lobo” fue regrabada en Sondor con el técnico Daniel Baéz (Octopus), según el mismo perfil.", source: sources.sietenotasProfile },
+  { label: "Radio en 2002", text: "Una versión rock de “Mi Bandera” sonó en la campaña “Contra el Bajón” de FM 93.9 Océano, según el perfil.", source: sources.sietenotasProfile },
+  { label: "Escenarios", text: "El perfil enumera Flanagan's, la Fête de la Musique del Liceo Francés, Club Unión Shangrila, La Comisaría, Amarcord, Katar y Plaza Mateo.", source: sources.sietenotasProfile },
+  { label: "Discrepancia sobre la pausa", text: "Una entrevista a Nacho Obes publicada por Montevideo Portal el 22 de mayo de 2020 dice que Doberman se disolvió en 2014 y tuvo un breve regreso en 2018. Las notas de 2026 describen una pausa sin disolución formal demostrada. El archivo mantiene ambas versiones.", source: sources.montevideo2020Obes },
 ];
 
 export const compilationXX = {

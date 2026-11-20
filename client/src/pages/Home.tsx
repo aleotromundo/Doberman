@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import {
   albums,
+  bandProfile,
   compilationXX,
   mediaItems,
   pressItems,
@@ -250,6 +251,21 @@ export default function Home() {
           </div>
         </section>
 
+        <section className="band-profile section-pad" id="banda">
+          <div className="section-label"><span>01b</span> / PERFIL DE LA BANDA</div>
+          <dl className="band-profile-list">
+            {bandProfile.map((item) => (
+              <div className="band-profile-item" key={item.label}>
+                <dt>{item.label}</dt>
+                <dd>
+                  <p>{item.text}</p>
+                  <a href={item.source.url} target="_blank" rel="noreferrer">Fuente: {item.source.label}<ArrowUpRight size={13} /></a>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
         <section className="discography section-pad" id="discografia">
           <div className="section-heading">
             <div><div className="section-label"><span>02</span> / DISCOGRAFÍA</div><h2>Cuatro discos.<br /><span>Cuatro momentos.</span></h2></div>
@@ -269,6 +285,8 @@ export default function Home() {
                   <div className="album-meta"><span><CalendarDays size={13} /> {album.year}</span><span><Music2 size={13} /> {album.trackCount} temas</span><span>{album.era}</span></div>
                   <p className="album-note">{album.note}</p>
                   <p className="evidence-note">{album.confidence}</p>
+                  {album.lineup && <p className="album-detail"><strong>Formación:</strong> {album.lineup}</p>}
+                  {album.credits?.map((credit) => <p className="album-detail" key={credit}><strong>Créditos:</strong> {credit}</p>)}
                   <details className="track-details" open={Boolean(query)}>
                     <summary><span>Lista de temas</span><span>{album.trackCount} pistas <span className="summary-plus">+</span></span></summary>
                     <ol className="track-list">
