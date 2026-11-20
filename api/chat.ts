@@ -2,7 +2,14 @@
 // La clave vive solo en la variable de entorno GEMINI_API_KEY (nunca en el código ni en el navegador).
 import { albums, bandProfile, compilationXX, pressItems, sourceDirectory, timeline } from "../client/src/data/doberman";
 
-const MODEL = "gemini-3.1-flash-lite";
+// Se prueban en orden: si un modelo no existe, no está disponible o da error de cuota, se pasa al siguiente.
+const MODELS = [
+  "gemini-3-flash-preview",
+  "gemini-3-pro",
+  "gemini-3-flash-8b",
+  "gemini-3-flash",
+  "gemini-1.5-flash",
+];
 const MAX_MESSAGES = 10;
 const MAX_CHARS = 1500;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
@@ -94,30 +101,31 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: "Escribí una pregunta para empezar." });
   }
 
+  const payload = JSON.stringify({
+    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: messages.map((message) => ({
+      role: message.role === "assistant" ? "model" : "user",
+      parts: [{ text: message.content }],
+    })),
+    generationConfig: { maxOutputTokens: 800, temperature: 0.4 },
+  });
+
   try {
-    const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: messages.map((message) => ({
-          role: message.role === "assistant" ? "model" : "user",
-          parts: [{ text: message.content }],
-        })),
-        generationConfig: { maxOutputTokens: 800, temperature: 0.4 },
-      }),
-    });
+    for (const model of MODELS) {
+      const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: payload,
+      });
+      if (!upstream.ok) continue;
 
-    if (!upstream.ok) {
-      return res.status(502).json({ error: "No pude responder ahora. Probá de nuevo en un rato." });
+      const data: any = await upstream.json();
+      const reply: string = data?.candidates?.[0]?.content?.parts?.map((part: any) => part.text ?? "").join("") ?? "";
+      if (reply.trim()) {
+        return res.status(200).json({ reply });
+      }
     }
-
-    const data: any = await upstream.json();
-    const reply: string = data?.candidates?.[0]?.content?.parts?.map((part: any) => part.text ?? "").join("") ?? "";
-    if (!reply.trim()) {
-      return res.status(502).json({ error: "No obtuve una respuesta. Probá reformular la pregunta." });
-    }
-    return res.status(200).json({ reply });
+    return res.status(502).json({ error: "No pude responder ahora. Probá de nuevo en un rato." });
   } catch {
     return res.status(502).json({ error: "No pude responder ahora. Probá de nuevo en un rato." });
   }
