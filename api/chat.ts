@@ -1,6 +1,5 @@
 // Función serverless de Vercel: chat del archivo Doberman con Gemini.
 // La clave vive solo en la variable de entorno GEMINI_API_KEY (nunca en el código ni en el navegador).
-import { albums, bandProfile, compilationXX, pressItems, sourceDirectory, timeline } from "../client/src/data/doberman";
 
 // Se prueban en orden: si un modelo no existe, no está disponible o da error de cuota, se pasa al siguiente.
 // Modelos con nivel gratuito según foros y guías de 2026.
@@ -30,7 +29,8 @@ function allowRequest(ip: string): boolean {
   return true;
 }
 
-function buildArchiveContext(): string {
+async function buildArchiveContext(): Promise<string> {
+  const { albums, bandProfile, compilationXX, pressItems, sourceDirectory, timeline } = await import("../client/src/data/doberman");
   const data = {
     perfil: bandProfile.map(({ label, text, source }) => ({ tema: label, texto: text, fuente: source.url })),
     discos: albums.map((album) => ({
@@ -50,7 +50,7 @@ function buildArchiveContext(): string {
   return JSON.stringify(data);
 }
 
-function buildSystemPrompt(): string {
+async function buildSystemPrompt(): Promise<string> {
   return `Sos el asistente del "Archivo abierto" de Doberman, una banda uruguaya de hard rock de Montevideo.
 Respondé siempre en español rioplatense, claro y breve.
 
@@ -63,7 +63,7 @@ Reglas:
 - No sos la banda ni hablás en su nombre. Si te preguntan por la opinión de los integrantes, aclará que no la tenés.
 
 Archivo (JSON):
-${buildArchiveContext()}`;
+${await buildArchiveContext()}`;
 }
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -104,7 +104,7 @@ async function handle(req: any, res: any) {
   }
 
   const payload = JSON.stringify({
-    systemInstruction: { parts: [{ text: buildSystemPrompt() }] },
+    systemInstruction: { parts: [{ text: await buildSystemPrompt() }] },
     contents: messages.map((message) => ({
       role: message.role === "assistant" ? "model" : "user",
       parts: [{ text: message.content }],
