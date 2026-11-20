@@ -399,3 +399,19 @@ img { display: block; max-width: 100%; }
 .chat-panel-form button:disabled { color: #55534e; cursor: default; }
 .chat-panel-note { margin: 0; padding: 0 12px 10px; color: #6f6d68; font-size: 11px; text-align: center; }
 @media (max-width: 480px) { .chat-panel { right: 8px; bottom: 8px; width: calc(100vw - 16px); height: calc(100vh - 16px); } }
+.live-stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px 16px; --glow: #5a5a62; }
+.live-stage.is-listening { --glow: #4fd1c5; }
+.live-stage.is-thinking { --glow: #8a8a92; }
+.live-stage.is-speaking { --glow: #f0a040; }
+.live-ring { position: relative; width: 210px; height: 210px; display: grid; place-items: center; border-radius: 50%; background: #0c0d0e; box-shadow: 0 0 0 2px var(--glow), 0 0 40px 6px color-mix(in srgb, var(--glow) 45%, transparent); transition: box-shadow .4s ease; }
+.live-ring .live-dog { width: 160px; height: 160px; }
+.live-stage.is-listening .live-ring { animation: live-pulse 1.6s ease-in-out infinite; }
+.live-stage.is-speaking .live-ring { animation: live-talk .35s ease-in-out infinite alternate; }
+.live-stage.is-thinking .live-ring { animation: live-breathe 2.2s ease-in-out infinite; }
+.live-stage.is-speaking .live-mouth { transform-origin: 100px 150px; animation: live-mouth .35s ease-in-out infinite alternate; }
+.live-status { margin: 0; color: var(--glow); font: 800 13px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+@keyframes live-pulse { 0%, 100% { box-shadow: 0 0 0 2px var(--glow), 0 0 26px 2px color-mix(in srgb, var(--glow) 35%, transparent); } 50% { box-shadow: 0 0 0 4px var(--glow), 0 0 60px 14px color-mix(in srgb, var(--glow) 55%, transparent); } }
+@keyframes live-talk { from { transform: scale(1); } to { transform: scale(1.06); } }
+@keyframes live-breathe { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+@keyframes live-mouth { from { transform: scaleY(1); } to { transform: scaleY(2.4); } }
+@media (prefers-reduced-motion: reduce) { .live-stage .live-ring, .live-stage .live-mouth { animation: none !important; } }
